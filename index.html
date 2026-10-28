@@ -27,6 +27,9 @@
   @keyframes bob { 50% { transform: translateY(1.5px); } }
   .run { animation: run 3s linear forwards; }
   @keyframes run { from { transform: translateX(170px); } to { transform: translateX(-30px); } }
+  /* longe das opções e sem atalho numérico, para não abandonar sem querer */
+  #quit { display: block; min-height: 44px; margin: 2em 0 0 auto; padding: .5em .8em; font: inherit; font-size: 15px; color: #ff5555; background: none; border: 2px solid #ff5555; cursor: pointer; }
+  #quit[hidden] { display: none; }
   #snd { position: fixed; top: .2em; right: .2em; width: 44px; height: 44px; font-size: 20px; background: none; border: 0; cursor: pointer; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .away { animation: away 3s ease-in forwards; }
@@ -39,6 +42,7 @@
 <div id="text" aria-hidden="true">Carregando…</div>
 <div id="sr" class="sr" aria-live="polite"></div>
 <div id="opts"></div>
+<button id="quit" hidden>✖ Abandonar caso e voltar ao menu</button>
 <script type="module">
 // --- arte: tudo desenhado aqui, paleta de 16 cores estilo EGA ---
 const K = { blk: '#000', blu: '#0000aa', grn: '#00aa00', cya: '#00aaaa', red: '#aa0000', mag: '#aa00aa', brn: '#aa5500', gry: '#aaaaaa',
@@ -360,7 +364,7 @@ function show() {
   const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
   const [kind, ...args] = lines[0].slice(1).split(' ');
   const a = args.map(Number);
-  const body = lines.slice(1).filter(l => !l.startsWith('> ') && !l.startsWith('# ')).join('\n');
+  const body = lines.slice(1).filter(l => !/^[>#~] /.test(l)).join('\n');
   const share = lines.find(l => l.startsWith('# '))?.slice(2);
   const buttons = lines.filter(l => l.startsWith('> ')).map((l, i) => {
     const b = document.createElement('button');
@@ -368,11 +372,11 @@ function show() {
     b.onclick = () => choose(i);
     return b;
   });
-  // fontes do dossiê viram links para os sites citados
-  for (const d of body.match(/^Fontes:.*$/m)?.[0].match(/[a-z0-9.-]+\.(?:com\.br|br|com)\b/g) ?? []) {
+  // fontes do dossiê viram links para as reportagens
+  for (const [label, url] of lines.filter(l => l.startsWith('~ ')).map(l => l.slice(2).split('|'))) {
     const l = document.createElement('a');
-    l.href = `https://${d}/`; l.target = '_blank'; l.rel = 'noopener';
-    l.textContent = `${buttons.length + 1}. 🔗 ${d}`;
+    l.href = url; l.target = '_blank'; l.rel = 'noopener';
+    l.textContent = `${buttons.length + 1}. 🔗 ${label}`;
     buttons.push(l);
   }
   if (share) {
@@ -387,6 +391,7 @@ function show() {
   const finish = () => {
     busy = false;
     opts.replaceChildren(...buttons);
+    quit.hidden = !['brief', 'city', 'travel'].includes(kind);
     draw(kind, a);
     art.setAttribute('aria-label', describe(kind, a));
     sr.textContent = body;
@@ -408,6 +413,8 @@ function show() {
   if (kind !== 'title' && kind !== 'dossie') city0 = a[0];
 }
 
+const quit = document.getElementById('quit');
+quit.onclick = () => { if (!busy && confirm('Abandonar o caso? Ele não conta como vitória nem derrota.')) { w.abandon(); show(); } };
 addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); opts.children[+e.key - 1]?.click(); });
 // carreira: total de casos resolvidos; valor ausente ou inválido vale 0
 let solved = 0;
