@@ -177,6 +177,26 @@ fn witness_name(i: usize) -> &'static str {
     if i < WITNESSES.len() { WITNESSES[i] } else { CITIES[(i - WITNESSES.len()) / 3].people[(i - WITNESSES.len()) % 3] }
 }
 
+// fala de abertura de cada testemunha local, mesma ordem de people
+const HELLO: [&str; 36] = [
+    "Meu cliente não comenta, mas eu sim.", "Circulando... tá bom, rapidinho.", "Olha a pamonha, pamonha fresquinha!",
+    "Tempo é dinheiro, e o seu está acabando.", "Vai um de queijo enquanto conversa?", "Fala rápido que tenho entrega.",
+    "Mate, limão, biscoito Globo!", "Trabalhei lá, mas nunca vi o gabinete por dentro.", "Altas ondas, brother.",
+    "Un tango y te cuento.", "¿Jugoso o a punto? Bueno, escuchá.", "Cambio, cambio! Pago bem no blue.",
+    "É panamá, mas é do Equador, viu?", "Bem-vindo ao Malecón 2000!", "Passaporte, por favor... ah, esse aí.",
+    "Sem correr na areia!", "Un cafecito antes?", "Só vim comprar umas coisinhas.",
+    "Shhh, mascote não fala... mas vou abrir exceção.", "Passe anual com desconto, quer?", "Tô há três horas nessa fila!",
+    "Isso vai te custar, mas tudo bem.", "Mantenha distância da escadaria.", "Não sou autorizado a falar, mas...",
+    "Siga meu guarda-chuva amarelo!", "Com tahine ou sem?", "Vim a pé desde a Galileia.",
+    "Senha 4.812, aguarde... ah, é você.", "Foto comigo, cinco euros.", "Não posso sair da posição, então fala daí.",
+    "Segure-se, que o 28 vai a abanar!", "Ai, que saudade...", "Pastéis saídos do forno, com canela!",
+    "Discrição é o nosso produto.", "Cuidado com a beira da levada.", "Prove este Madeira de 1999.",
+];
+// "Fala. " para locais, vazio para genéricos
+fn hello(i: usize) -> String {
+    if i < WITNESSES.len() { String::new() } else { format!("{} ", HELLO[i - WITNESSES.len()]) }
+}
+
 const NOTHING: [&str; 4] = [
     "Senador? Aqui? Nunca vi.",
     "Não vi ninguém de terno fugindo por aqui, não.",
@@ -290,8 +310,9 @@ impl Game {
         self.last_ask = Some(slot);
         self.hours -= H_ASK;
         let who = witness_name(self.witnesses[slot]);
+        let hi = hello(self.witnesses[slot]);
         if !self.on_trail() {
-            self.msg = format!("{}: \"{}\"", who, NOTHING[self.rand(NOTHING.len())]);
+            self.msg = format!("{}: \"{}{}\"", who, hi, NOTHING[self.rand(NOTHING.len())]);
         } else if self.step == self.last() {
             let city = CITIES[self.here].name;
             if self.mandado {
@@ -302,7 +323,7 @@ impl Game {
         } else {
             let next = self.route[self.step + 1];
             let clue = CITIES[next].clues[self.rand(4)];
-            self.msg = format!("{}: \"{}\"", who, clue);
+            self.msg = format!("{}: \"{}{}\"", who, hi, clue);
             if slot == self.prova_slot && !self.prova_taken {
                 self.prova_taken = true;
                 self.provas += 1;
@@ -424,8 +445,9 @@ impl Game {
             Screen::Title => "@title".into(),
             Screen::DossieList | Screen::Dossie(_) => "@dossie".into(),
             Screen::Brief => format!("@brief {}", self.here),
-            Screen::City => format!("@city {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
-                self.last_ask.map_or(0, |s| s + 1)),
+            // @city cidade w0 w1 w2 quem_fala no_rastro horas prazo
+            Screen::City => format!("@city {} {} {} {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
+                self.last_ask.map_or(0, |s| s + 1), self.on_trail() as u8, self.hours.max(0), HOURS),
             Screen::Travel => format!("@travel {} {}", self.here, self.dests.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" ")),
             Screen::End => format!("@{} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here),
         }
@@ -545,6 +567,8 @@ mod tests {
         assert!(!g.on_trail());
         g.act(0);
         assert!(NOTHING.iter().any(|n| g.msg.contains(n)), "{}", g.msg);
+        let w = g.witnesses[0];
+        assert_eq!(w >= WITNESSES.len(), g.msg.contains(hello(w).trim()) && !hello(w).is_empty(), "{}", g.msg);
         // Volta é oferecida a partir da cidade errada
         g.act(3);
         assert!(g.dests.contains(&g.route[g.step]));

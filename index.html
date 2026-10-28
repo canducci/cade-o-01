@@ -24,11 +24,15 @@
   @keyframes blink { 50% { opacity: 0; } }
   .bob { animation: bob 2s ease-in-out infinite; }
   @keyframes bob { 50% { transform: translateY(1.5px); } }
+  .run { animation: run 3s linear forwards; }
+  @keyframes run { from { transform: translateX(170px); } to { transform: translateX(-30px); } }
+  #snd { position: fixed; top: .5em; right: .5em; font-size: 20px; background: none; border: 0; cursor: pointer; }
   .away { animation: away 3s ease-in forwards; }
   @keyframes away { from { transform: translate(0, 0); } to { transform: translate(140px, -70px) scale(.3); } }
 </style>
 </head>
 <body>
+<button id="snd" title="Som (tecla S)" aria-label="Ligar ou desligar o som">🔊</button>
 <svg id="art" viewBox="0 0 160 90"></svg>
 <div id="text">Carregando…</div>
 <div id="opts"></div>
@@ -143,6 +147,21 @@ const WITNESS = [person('y', 'w', 'd'), person('k', 'w', 'k'), person('n', 'd', 
   person('k', 'b', 'd'), person('R', 'y', 'n', 'p', 'plume'), person('R', 'y', 'b', 'p', 'plume'), // Roma
   person('k', 'y', 'd', 'p', 'cap'), person('k', 'd', 'k'), person('w', 'w', 'd', 'p', 'chef'), // Lisboa
   person('a', 'd', 'd', 'p', 'bald'), person('n', 'G', 'n', 'p', 'hat'), person('a', 'm', 'n')]; // Funchal
+// acessório na mão direita de cada testemunha, mesma ordem de WITNESS
+const PROP = {
+  taxi: ['kyk', 'yyy'], tray: ['wyw', 'aaa'], folder: ['yy', 'yy'], choc: ['MMM', 'nnn'], sign: ['RRR', 'RwR', '.a.', '.a.', '.a.'],
+  phone: ['k', 'C', 'k'], roll: ['kkk', 'kkk', 'kkk', 'a.a'], bino: ['k.k', 'kkk'], case: ['.k.', 'nnn', 'nnn'], radio: ['a', 'k', 'k'],
+  corn: ['g', 'y', 'y', 'g'], money: ['.g.', 'ggg', 'ggg'], pastel: ['.y.', 'yyy'], box: ['RRR', 'RRR', 'RRR'], tank: ['aa', 'aa', 'aa'],
+  board: ['w', 'R', 'w', 'R', 'w', 'w'], rose: ['R', 'g', 'g'], spit: ['a', 'r', 'r', 'a'], bills: ['ggg', 'ggg'], hats: ['www', 'www'],
+  flag: ['RR', 'a.', 'a.', 'a.'], clip: ['ww', 'ww', 'aa'], buoy: ['RwR', 'w.w', 'RwR'], cup: ['w', 'n'], bags: ['nnn', 'kkk', 'nnn', 'kkk'],
+  balloon: ['R', 'R', 'a', 'a'], ticket: ['yy', 'yy'], shop: ['M.M', 'MMM', 'MMM'], papers: ['ww', 'ww', 'ww'], pita: ['nn', 'yy'],
+  staff: ['n', 'n', 'n', 'n', 'n', 'n'], passport: ['rr', 'ry'], shield: ['yRy', 'RRR', '.R.'], spear: ['a', 'a', 'n', 'n', 'n', 'n'],
+  bell: ['y', 'y'], guitar: ['.n', '.n', 'nn', 'nn'], nata: ['.n.', 'nyn'], calc: ['aa', 'kk', 'aa'], wine: ['.g', 'gg', 'gg'],
+};
+const ACC = ['taxi', 'tray', 'folder', 'choc', 'sign', 'phone', 'roll', 'bino',
+  'case', 'radio', 'corn', 'money', 'pastel', 'box', 'tank', 'folder', 'board', 'rose', 'spit', 'bills',
+  'hats', 'flag', 'clip', 'buoy', 'cup', 'bags', 'balloon', 'ticket', 'shop', 'case', 'radio', 'papers',
+  'flag', 'pita', 'staff', 'passport', 'shield', 'spear', 'bell', 'guitar', 'nata', 'calc', 'staff', 'wine'];
 const FLAVIO = ['..yyyy..', '.yyyyyGG', '..pppp..', '..kkkk..', '..pppp..', '.dwwwwd.', 'dddggddd', 'pddggddp', 'pddddddp', '.dddddd.', '.dd..dd.', '.dd..dd.', '.kk..kk.'];
 const AGENT = ['..bbbb..', '.bbbbbb.', '..pppp..', '..kppk..', '..pppp..', '.bbbbbb.', 'bbyyyybb', 'pbbbbbbp', 'pbbbbbbp', '.kkkkkk.', '.kk..kk.', '.kk..kk.', '.nn..nn.'];
 const FEET = 88;
@@ -187,10 +206,10 @@ const outlined = (rows, x, y) => {
 };
 const BUBBLE_L = BUBBLE.map(r => [...r].reverse().join(''));
 // nas laterais, para não tapar o ponto turístico do centro
-const WX = [4, 24, 140];
+const WX = [2, 26, 140];
 const witnesses = (ws, talk) => ws.map((w, i) => {
   const x = WX[i], right = x > 100;
-  return outlined(WITNESS[w], x, FEET - 26) + (talk === i + 1 ?
+  return outlined(WITNESS[w], x, FEET - 26) + outlined(PROP[ACC[w]], right ? x + 2 - PROP[ACC[w]][0].length * 2 : x + 14, FEET - 12) + (talk === i + 1 ?
     anim('bob', outlined(right ? BUBBLE_L : BUBBLE, right ? x - 14 : x + 14, 52)) + anim('blink', R(x + 6, FEET - 18, 4, 2, K.red)) : '');
 }).join('');
 
@@ -212,13 +231,33 @@ const map = () => R(0, 0, 160, 90, K.blu) +
   [20, 40, 60, 80, 100, 120, 140].map(x => R(x, 0, .3, 90, K.lbl)).join('') + [15, 30, 45, 60, 75].map(y => R(0, y, 160, .3, K.lbl)).join('') +
   LAND.map(a => P(a.map((v, i) => i % 2 ? my(v) : mx(v)).join(' '), K.grn)).join('');
 // lado do rótulo por cidade (direita, esquerda, acima, abaixo) para não encavalar vizinhas
-const SIDE = 'rlrrrdurlurl';
+const SIDE = 'rlrrrdurlrul';
 const LBL = { r: [2.5, 1.5, 'start'], l: [-2.5, 1.5, 'end'], u: [0, -2.5, 'middle'], d: [0, 5.5, 'middle'] };
 const dot = (c, color, label = '', a = '') => {
   const [x, y] = xy(c), [dx, dy, anchor] = LBL[SIDE[c]];
   return C(x, y, 1.6, color, a) + (label ? T(x + dx, y + dy, 4, K.wht, label, `text-anchor="${anchor}"`) : '');
 };
 const PLANE = `<polygon points="5,0 1,1 -1,4 -2.5,4 -1.5,1 -3.5,1 -4.5,2.5 -5.5,2.5 -4.5,0 -5.5,-2.5 -4.5,-2.5 -3.5,-1 -1.5,-1 -2.5,-4 -1,-4 1,-1" fill="${K.wht}" stroke="${K.blk}" stroke-width=".3"/>`;
+
+// --- som: bipes de PC speaker (onda quadrada) ---
+let ac, muted = localStorage.mute === '1';
+const snd = document.getElementById('snd');
+const toggleSound = () => { muted = !muted; localStorage.mute = muted ? '1' : '0'; snd.textContent = muted ? '🔇' : '🔊'; };
+snd.textContent = muted ? '🔇' : '🔊';
+snd.onclick = toggleSound;
+function beep(f, ms, f2 = f, at = 0, vol = .03) {
+  if (muted) return;
+  ac ??= new AudioContext();
+  if (ac.state === 'suspended') ac.resume();
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at / 1000;
+  o.type = 'square';
+  o.frequency.setValueAtTime(f, t);
+  o.frequency.linearRampToValueAtTime(f2, t + ms / 1000);
+  g.gain.value = vol;
+  o.connect(g).connect(ac.destination);
+  o.start(t); o.stop(t + ms / 1000);
+}
+const siren = () => { for (let i = 0; i < 8; i++) beep(i % 2 ? 660 : 880, 220, undefined, i * 230); };
 
 const art = document.getElementById('art');
 function draw(kind, a) {
@@ -234,7 +273,11 @@ function draw(kind, a) {
   } else if (kind === 'brief') {
     art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET);
   } else if (kind === 'city') {
-    art.innerHTML = CITY[a[0]]() + witnesses(a.slice(1, 4), a[4]);
+    // a = [cidade, w0, w1, w2, fala, no_rastro, horas, prazo]
+    const left = a[6] / a[7], bar = left > .5 ? K.lgn : left > .25 ? K.yel : K.lrd;
+    art.innerHTML = CITY[a[0]]() +
+      (a[5] && !a[4] ? anim('run', at(FLAVIO.map(r => r.replace(/[^.]/g, 'k')), 0, 70, 'opacity=".8"')) : '') +
+      witnesses(a.slice(1, 4), a[4]) + R(2, 2, 52, 5, K.blk) + R(3, 3, 50 * left, 3, bar, left <= .25 ? 'class="blink"' : '');
   } else if (kind === 'travel') {
     art.innerHTML = map() + C(...xy(a[0]), 3, 'none', `stroke="${K.lrd}" stroke-width=".6" class="blink"`) + dot(a[0], K.lrd) + T(xy(a[0])[0] + 4, xy(a[0])[1] + 1.5, 4, K.lrd, 'você') + a.slice(1).map((c, i) => dot(c, K.yel, `${i + 1}.${CITY_NAME[c]}`)).join('');
   } else if (kind === 'win') {
@@ -283,7 +326,7 @@ let scene0 = '', city0 = -1, busy = false, typing = 0;
 function type(s) {
   clearInterval(typing);
   let n = 0;
-  typing = setInterval(() => { n += 3; text.textContent = s.slice(0, n); if (n >= s.length) clearInterval(typing); }, 12);
+  typing = setInterval(() => { n += 3; if (n % 12 === 0 && s[n] > ' ') beep(1200 + n % 5 * 60, 6); text.textContent = s.slice(0, n); if (n >= s.length) clearInterval(typing); }, 12);
   text.onclick = () => { clearInterval(typing); text.textContent = s; };
 }
 
@@ -309,12 +352,15 @@ function show() {
     opts.replaceChildren(...buttons);
     draw(kind, a);
     type(body);
+    if (kind === 'win') siren();
+    if (kind === 'lose') beep(440, 900, 110);
   };
   const flying = scene0 === 'travel' && kind !== 'travel' && a[0] !== city0;
   if (flying) {
     busy = true;
     opts.replaceChildren();
     text.textContent = '✈️ Voando...';
+    beep(180, 1500, 900, 0, .02);
     fly(city0, a[0], 1600, finish);
   } else finish();
   if (kind !== 'title') titleRun++;
@@ -322,7 +368,7 @@ function show() {
   if (kind !== 'title' && kind !== 'dossie') city0 = a[0];
 }
 
-addEventListener('keydown', e => { const n = +e.key; if (n >= 1 && n <= opts.children.length) choose(n - 1); });
+addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); const n = +e.key; if (n >= 1 && n <= opts.children.length) choose(n - 1); });
 w.start(Date.now() >>> 0);
 show();
 </script>

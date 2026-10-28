@@ -9,6 +9,6 @@ w.act(0); w.act(0);
 const s = read();
 if (!s.includes('⏳ 80h') || !s.includes('> Viajar')) throw new Error(s);
 w.act(0);
-if (!/^@city \d+ \d+ \d+ \d+ 1\n/.test(read())) throw new Error('linha de cena: ' + read().split('\n')[0]);
+if (!/^@city \d+ \d+ \d+ \d+ 1 1 78 80\n/.test(read())) throw new Error('linha de cena: ' + read().split('\n')[0]);
 console.log(read());
 console.log('ok');
