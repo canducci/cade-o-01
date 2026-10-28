@@ -15,5 +15,5 @@ console.log(read());
 w.start(42, 7);
 w.act(0); w.act(0);
 while (!/^@(win|lose) /.test(read())) w.act(0);
-if (!/^@lose \d+ 7\n/.test(read())) throw new Error('cena de fim: ' + read().split('\n')[0]);
+if (!/^@lose \d+ 7 0\n/.test(read())) throw new Error('cena de fim: ' + read().split('\n')[0]);
 console.log('ok');
