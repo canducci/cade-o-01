@@ -464,6 +464,16 @@ impl Game {
         format!("\n\nPosto: {} · {} caso{s} resolvido{s}{}", self.posto().name, self.solved, next)
     }
 
+    // Texto para o jogador copiar no fim do caso, com o link do jogo.
+    fn share(&self) -> String {
+        let city = CITIES[self.here].name;
+        let line = if self.end.contains("🏆") { format!("🚔 Peguei o 01 em {} com {}h de sobra", city, self.hours) }
+            else if self.end.contains("ARQUIVADO") { format!("📁 O relator arquivou meu caso em {}", city) }
+            else if self.end.contains("⏰") { format!("⏰ O prazo acabou e o 01 sumiu perto de {}", city) }
+            else { format!("🛩️ Achei o 01 em {}, mas sem mandado ele embarcou num jatinho", city) };
+        format!("{}{}. Cadê o 01? https://canducci.github.io/cade-o-01/", line, if self.hard { " ⛪" } else { "" })
+    }
+
     // Primeira linha "@cena args" diz ao JS o que desenhar.
     fn scene(&self) -> String {
         match self.screen {
@@ -499,6 +509,11 @@ Interrogar: {}h · Viajar: {}h · Mandado: {}h, com {} provas, antes de alcança
             Screen::Travel => format!("{}Para onde?", self.header()),
             Screen::End => format!("CASO: {}\n\n{}", CASES[self.case].title, self.end),
         };
+        // linha "# " = texto de compartilhar; o JS tira do corpo e põe num botão
+        if self.screen == Screen::End {
+            s += "\n# ";
+            s += &self.share();
+        }
         for o in self.options() {
             s += "\n> ";
             s += &o;
@@ -620,6 +635,10 @@ mod tests {
         let wins = |e: &[String]| e.iter().filter(|t| t.contains("CASO ENCERRADO")).count();
         assert!(hard.iter().any(|t| t.contains("ARQUIVADO")));
         assert!(!normal.iter().any(|t| t.contains("ARQUIVADO")));
+        let share = |t: &String| t.lines().find(|l| l.starts_with("# ")).unwrap().to_string();
+        assert!(hard.iter().all(|t| share(t).ends_with("⛪. Cadê o 01? https://canducci.github.io/cade-o-01/")));
+        assert!(normal.iter().any(|t| share(t).starts_with("# 🚔 Peguei o 01 em ") && share(t).contains("h de sobra. ")));
+        assert!(hard.iter().any(|t| share(t).starts_with("# 📁 O relator arquivou")));
         // a cena de fim marca o arquivamento para o JS desenhar o carimbo
         assert!(hard.iter().all(|t| t.contains("ARQUIVADO") == t.lines().next().unwrap().ends_with(" 1")));
         assert!(wins(&hard) > 0 && wins(&hard) < wins(&normal), "hard={} normal={}", wins(&hard), wins(&normal));
