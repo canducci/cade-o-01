@@ -27,14 +27,16 @@
   .run { animation: run 3s linear forwards; }
   @keyframes run { from { transform: translateX(170px); } to { transform: translateX(-30px); } }
   #snd { position: fixed; top: .5em; right: .5em; font-size: 20px; background: none; border: 0; cursor: pointer; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .away { animation: away 3s ease-in forwards; }
   @keyframes away { from { transform: translate(0, 0); } to { transform: translate(140px, -70px) scale(.3); } }
 </style>
 </head>
 <body>
 <button id="snd" title="Som (tecla S)" aria-label="Ligar ou desligar o som">🔊</button>
-<svg id="art" viewBox="0 0 160 90"></svg>
-<div id="text">Carregando…</div>
+<svg id="art" viewBox="0 0 160 90" role="img" aria-label="Carregando"></svg>
+<div id="text" aria-hidden="true">Carregando…</div>
+<div id="sr" class="sr" aria-live="polite"></div>
 <div id="opts"></div>
 <script type="module">
 // --- arte: tudo desenhado aqui, paleta de 16 cores estilo EGA ---
@@ -294,6 +296,19 @@ function draw(kind, a) {
   }
 }
 
+// descrição em texto de cada cena, para leitor de tela
+function describe(kind, a) {
+  const c = CITY_NAME[a[0]];
+  return kind === 'title' ? 'Mapa-múndi com as cidades do jogo; o agente e o 01 nos cantos.'
+    : kind === 'dossie' ? 'Pasta de dossiê com carimbo CONFIDENCIAL.'
+    : kind === 'brief' ? `Cartão-postal de ${c}, com o agente no centro.`
+    : kind === 'city' ? `Cartão-postal de ${c}, com três testemunhas${a[4] ? '; uma delas está falando' : ''}${a[5] && !a[4] ? '; uma silhueta passa correndo ao fundo' : ''}.`
+    : kind === 'travel' ? `Mapa com a sua posição em ${c} e os destinos numerados: ${a.slice(1).map(d => CITY_NAME[d]).join(', ')}.`
+    : kind === 'win' ? `Em ${c}, o agente algema o 01 sob luzes de sirene.`
+    : a[2] ? 'Dossiê com carimbo ARQUIVADO; o jatinho do 01 vai embora.'
+    : `Em ${c}, o 01 foge de jatinho enquanto o agente olha.`;
+}
+
 // avião voando por uma curva entre duas cidades
 function fly(from, to, ms, done) {
   const [x1, y1] = xy(from), [x2, y2] = xy(to);
@@ -323,7 +338,7 @@ function titleLoop(from = 0) {
 const { instance } = await WebAssembly.instantiateStreaming(fetch('game.wasm'));
 const w = instance.exports;
 const dec = new TextDecoder('utf-8');
-const text = document.getElementById('text'), opts = document.getElementById('opts');
+const text = document.getElementById('text'), opts = document.getElementById('opts'), sr = document.getElementById('sr');
 let scene0 = '', city0 = -1, busy = false, typing = 0;
 
 // bipe de digitação só quando uma testemunha fala
@@ -344,17 +359,29 @@ function show() {
   const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
   const [kind, ...args] = lines[0].slice(1).split(' ');
   const a = args.map(Number);
-  const body = lines.slice(1).filter(l => !l.startsWith('> ')).join('\n');
+  const body = lines.slice(1).filter(l => !l.startsWith('> ') && !l.startsWith('# ')).join('\n');
+  const share = lines.find(l => l.startsWith('# '))?.slice(2);
   const buttons = lines.filter(l => l.startsWith('> ')).map((l, i) => {
     const b = document.createElement('button');
     b.textContent = `${i + 1}. ${l.slice(2)}`;
     b.onclick = () => choose(i);
     return b;
   });
+  if (share) {
+    const b = document.createElement('button'), label = `${buttons.length + 1}. Copiar resultado`;
+    b.textContent = label;
+    b.onclick = () => navigator.clipboard.writeText(share).then(() => {
+      b.textContent = '✔ Copiado!';
+      setTimeout(() => b.textContent = label, 2000);
+    }, () => prompt('Copie o resultado:', share));
+    buttons.push(b);
+  }
   const finish = () => {
     busy = false;
     opts.replaceChildren(...buttons);
     draw(kind, a);
+    art.setAttribute('aria-label', describe(kind, a));
+    sr.textContent = body;
     type(body, kind === 'city' && a[4]);
     if (kind === 'win') siren();
     if (kind === 'win' || kind === 'lose') try { localStorage.solved = a[1]; } catch {}
@@ -373,7 +400,7 @@ function show() {
   if (kind !== 'title' && kind !== 'dossie') city0 = a[0];
 }
 
-addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); const n = +e.key; if (n >= 1 && n <= opts.children.length) choose(n - 1); });
+addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); opts.children[+e.key - 1]?.click(); });
 // carreira: total de casos resolvidos; valor ausente ou inválido vale 0
 let solved = 0;
 try { const v = Number(localStorage.solved ?? 0); if (Number.isInteger(v) && v >= 0 && v <= 0xFFFFFFFF) solved = v; } catch {}
