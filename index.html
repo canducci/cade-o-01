@@ -16,8 +16,8 @@
   /* balão de fala sobre a cena; fica abaixo da barra de prazo e acima das linhas de varredura */
   #screen { container-type: inline-size; }
   #balloon { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-  #say { position: absolute; top: 10%; bottom: 38%; max-width: 64%; display: flex; flex-direction: column; justify-content: flex-end; }
-  #say div { padding: .2em .45em; color: #000; background: #fff; border: 2px solid #000; font-size: max(14px, 3.2cqw); line-height: 1.05; pointer-events: auto; cursor: pointer; }
+  #say { position: absolute; top: 10%; bottom: 38%; max-width: 70%; display: flex; flex-direction: column; justify-content: flex-end; }
+  #say div { padding: .2em .45em; color: #000; background: #fff; border: 2px solid #000; font-size: max(17px, 3.6cqw); line-height: 1.05; pointer-events: auto; cursor: pointer; }
   #tail { position: absolute; bottom: calc(38% - 10px); width: 14px; height: 12px; margin-left: -7px; background: #000; clip-path: polygon(0 0, 100% 0, 50% 100%); }
   #tail::after { content: ''; position: absolute; left: 3px; top: 0; width: 8px; height: 8px; background: #fff; clip-path: polygon(0 0, 100% 0, 50% 100%); }
   /* provas e eventos: faixa que pisca ao entrar */
@@ -26,7 +26,7 @@
   @media (prefers-reduced-motion: reduce) { .hl { animation: none; } }
   #text { white-space: pre-wrap; border: 6px double #aaaaaa; padding: .8em 1em; background: #0000aa; min-height: 6em; cursor: pointer; }
   #opts { display: grid; grid-template-columns: 1fr 1fr; gap: .4em; margin-top: .4em; }
-  @media (max-width: 600px) { body { font-size: 20px; } #opts { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { body { font-size: 20px; } #opts { grid-template-columns: 1fr; } #say { max-width: 96%; } }
   /* alvo de toque de pelo menos 44px */
   #opts button, #opts a { display: block; box-sizing: border-box; width: 100%; min-height: 44px; padding: .5em .6em; text-align: left; font: inherit; font-size: 21px; line-height: 1.1; color: #000; background: #55ffff; border: 0; cursor: pointer; text-decoration: none;
     box-shadow: inset 3px 3px 0 #fff, inset -3px -3px 0 #00aaaa; }
