@@ -55,19 +55,19 @@ const T = (x, y, s, c, txt, a = '') => `<text x="${x}" y="${y}" font-size="${s}"
 // sprites: grade de texto, 1 letra = 1 pixel de 2x2 unidades; '.' é transparente
 const PAL = { k: K.blk, b: K.blu, g: K.grn, c: K.cya, r: K.red, m: K.mag, n: K.brn, a: K.gry, d: K.dgr, B: K.lbl,
   G: K.lgn, C: K.lcy, R: K.lrd, M: K.lmg, y: K.yel, w: K.wht, p: '#ffaa77' };
-const spr = (rows, x, y, a = '') => {
+const spr = (rows, x, y, a = '', s = 2) => {
   let out = '';
   rows.forEach((row, j) => {
     for (let i = 0; i < row.length;) {
       let n = 1;
       while (row[i + n] === row[i]) n++;
-      if (row[i] !== '.') out += R(i * 2, j * 2, n * 2, 2, PAL[row[i]]);
+      if (row[i] !== '.') out += R(i * s, j * s, n * s, s, PAL[row[i]]);
       i += n;
     }
   });
   return `<g transform="translate(${x} ${y})" ${a}>${out}</g>`;
 };
-const at = (rows, x, bottom, a) => spr(rows, x, bottom - rows.length * 2, a); // apoia o sprite no chão
+const at = (rows, x, bottom, a, s = 2) => spr(rows, x, bottom - rows.length * s, a, s); // apoia o sprite no chão
 const anim = (cls, s) => `<g class="${cls}">${s}</g>`; // animação CSS fora do transform do sprite
 
 // geradores de grade
@@ -109,13 +109,9 @@ const PALM = ['..G...G..', '.GgG.GgG.', 'GG.GnG.GG', 'G...n...G', '....n....', '
 const TREE = ['.GGGG.', 'GGgGGG', 'GGGGgG', '.GGGG.', '..nn..', '..nn..', '..nn..', '..nn..'];
 const IGUANA = ['.....GGk', 'GGGGGGG.', '.g..g...'];
 const UMBRELLA = ['..RRR..', '.RRwRR.', 'RRwRRwR', '...n...', '...n...', '...n...'];
-const CRISTO = ['...ww...', '..wwww..', 'wwwwwwww', '...ww...', '..wwww..', '..wwww..', '..wwww..', '.aaaaaa.'];
 const LIGHTHOUSE = ['..yy..', '.rrrr.', '.wwww.', '.rrrr.', '.wwww.', '.rrrr.', '.wwww.', 'rrrrrr'];
 const MASP = ['rrrrrrrrrrrrrrrrrrrrrrrrrr', 'rkkkkkkkkkkkkkkkkkkkkkkkkr', 'rkykykykykykykykykykykykkr', 'rkkkkkkkkkkkkkkkkkkkkkkkkr',
   'rkykykykykykykykykykykykkr', 'rrrrrrrrrrrrrrrrrrrrrrrrrr', ...Array(7).fill('r........................r')];
-const CONGRESSO = [...Array(7).fill('..............aa.aa...........'), '..............aaaaa...........', ...Array(4).fill('..............aa.aa...........'),
-  'wwwwwwwww.....aa.aa....www....', '.wwwwwww......aa.aa...wwwww...', '..wwwww.......aa.aa..wwwwwww..', '...www........aa.aa.wwwwwwwww.',
-  'wwwwwwwwwwwwwwwwwwwwwwwwwwwwww', 'wawawawawawawawawawawawawawawa', 'wwwwwwwwwwwwwwwwwwwwwwwwwwwwww'];
 const CASA_ROSADA = ['..........MMMM..........', '........MMMMMMMM........', 'MMMMMMMMMMMMMMMMMMMMMMMM', 'MwMMwMMwMMwMMwMMwMMwMMwM',
   'MMMMMMMMMMMMMMMMMMMMMMMM', 'MwMMwMMwMMwMMwMMwMMwMMwM', 'MMMMMMMMMMMMMMMMMMMMMMMM', 'MMMMMMMMMMkkkkMMMMMMMMMM', 'MMMMMMMMMMkkkkMMMMMMMMMM'];
 const CAPITOL = ['.............a..............', '.............ww.............', '............wwww............', '...........wwwwww...........',
@@ -179,13 +175,66 @@ const scene = (sky, ground, body, opt = {}) =>
   cloud(10, 40, 5) + cloud(20, 55, 30) + R(0, 70, 160, 20, ground) + body;
 const waves = anim('bob', R(20, 80, 8, 2, K.lcy) + R(90, 84, 10, 2, K.lcy) + R(130, 78, 6, 2, K.lcy));
 
+// --- alta resolução: pixel de 1 unidade, ainda nas 16 cores; meio-tom por pontilhado xadrez ---
+// os <defs> vão dentro da cena, para o cartão de compartilhar (que serializa só o #art) levar junto
+const DITHER = '<defs>' + Object.entries(K).map(([k, c]) =>
+  `<pattern id="d-${k}" width="2" height="2" patternUnits="userSpaceOnUse">${R(0, 0, 1, 1, c)}${R(1, 1, 1, 1, c)}</pattern>`).join('') + '</defs>';
+const dith = (x, y, w, h, c1, c2) => R(x, y, w, h, K[c1]) + R(x, y, w, h, `url(#d-${c2})`);
+// degradê vertical (céu, mar) de top a bottom: pontilhado ordenado (Bayer 4x4), 8 níveis entre cada par de cores
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const grad = (top, bottom, ...cs) => {
+  const n = (cs.length - 1) * 8, y = j => top + Math.round(j * (bottom - top) / (n + 1));
+  let defs = '', out = R(0, top, 160, bottom - top, K[cs.at(-1)]);
+  for (let j = 0; j < n; j++) {
+    const lvl = j % 8 * 2, next = K[cs[(j >> 3) + 1]], id = `g${top}-${j}`, band = f => R(0, y(j), 160, y(j + 1) - y(j), f);
+    if (lvl) defs += `<pattern id="${id}" width="4" height="4" patternUnits="userSpaceOnUse">${BAYER.map((b, i) => b < lvl ? R(i % 4, i >> 2, 1, 1, next) : '').join('')}</pattern>`;
+    out += band(K[cs[j >> 3]]) + (lvl ? band(`url(#${id})`) : '');
+  }
+  return `<defs>${defs}</defs>` + out;
+};
+// forma desenhada linha a linha: meia-largura f(t), t de 0 (topo) a 1 (base); lado esquerdo iluminado
+const shape = (cx, top, bottom, f, lit, shade = lit) => Array.from({ length: bottom - top }, (_, j) => {
+  const h = Math.round(f((j + 1) / (bottom - top)));
+  return h > 0 ? R(cx - h, top + j, h, 1, K[lit]) + R(cx, top + j, h, 1, K[shade]) : '';
+}).join('');
+const round = t => Math.sqrt(t * (2 - t)); // perfil de cúpula
+const disc = (cx, cy, r, c) => shape(cx, cy - r, cy, t => r * round(t), c) + shape(cx, cy, cy + r, t => r * round(1 - t + 1 / r), c);
+const line = (x1, y1, x2, y2, c) => {
+  const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
+  return Array.from({ length: n + 1 }, (_, i) => R(Math.round(x1 + (x2 - x1) * i / n), Math.round(y1 + (y2 - y1) * i / n), 1, 1, K[c])).join('');
+};
+const BIRD = ['k...k', '.k.k.', '..k..'];
+const birds = (y, dur) => `<g class="cloud" style="animation-duration:${dur}s">${spr(BIRD, 0, y, '', 1)}${spr(BIRD, 8, y + 4, '', 1)}</g>`;
+const CRISTO = ['.......w.......', '......www......', '......wwa......', 'wwwwwwwwwwwwwwa', 'aaaaawwwaaaaaa.', '......wwa......',
+  '......wwa......', '.....wwwa......', '.....wwwa......', '.....wwwaa.....', '.....wwwaa.....', '....wwwwaa.....', '....wwwwaa.....',
+  '...wwwwwaaa....', '....aaaaaaa....', '....ddddddd....', '....aaaaaaa....', '....ddddddd....'];
+const ministry = x => R(x, 57, 7, 7, K.gry) + [58, 60, 62].map(y => R(x + 1, y, 5, 1, K.dgr)).join('');
+const CALCADA = [80, 85].map(y => Array.from({ length: 160 }, (_, x) => R(x, y + Math.round(2 * Math.sin(x / 4)), 1, 1, K.gry)).join('')).join('');
+
 const CITY = [
-  () => scene(K.lbl, K.grn, R(0, 66, 160, 4, K.lgn) + at(CONGRESSO, 50, 70)),
+  // Brasília: céu seco, Esplanada, Congresso (torres, cúpula do Senado, cuia da Câmara) e espelho d'água
+  () => DITHER + grad(0, 64, 'blu', 'lbl', 'lcy') + anim('bob', disc(140, 12, 5, 'yel')) + R(18, 14, 34, 1, 'url(#d-wht)') + R(96, 20, 26, 1, 'url(#d-wht)') +
+    birds(26, 34) + R(0, 60, 160, 4, K.grn) + [4, 18, 31, 128, 141, 154].map(x => R(x, 58, 6, 2, K.grn)).join('') +
+    [6, 18, 30, 132, 144].map(ministry).join('') +
+    [76, 82].map(x => R(x, 18, 3, 36, K.wht) + R(x + 3, 18, 1, 36, K.gry)).join('') + R(80, 18, 2, 36, K.dgr) +
+    [22, 26, 30, 34, 38, 42, 46, 50].map(y => R(76, y, 8, 1, K.gry)).join('') +
+    R(40, 54, 90, 3, K.wht) + R(40, 57, 90, 1, K.gry) + R(44, 58, 82, 6, K.dgr) + R(46, 60, 78, 1, K.blk) +
+    shape(58, 47, 54, t => 7 * round(t), 'wht', 'gry') +
+    shape(108, 46, 54, t => 3 + 9 * (1 - t) ** 1.5, 'wht', 'gry') + R(98, 46, 20, 1, K.gry) +
+    grad(64, 70, 'blu', 'lbl') + R(76, 64, 8, 5, 'url(#d-gry)') + anim('bob', R(30, 67, 10, 1, K.lcy) + R(110, 66, 14, 1, K.lcy)) +
+    R(0, 70, 160, 20, K.grn) + dith(0, 70, 160, 2, 'grn', 'lgn'),
   () => scene(K.gry, K.dgr, at(building(10, 24, 'd'), 0, 70) + at(building(8, 19, 'k'), 22, 70) + at(building(9, 26, 'd'), 118, 70) +
     at(building(10, 20, 'k'), 140, 70) + at(MASP, 54, 70) +
     anim('rain', [10, 30, 50, 70, 90, 110, 130, 150].map((x, i) => R(x, 8 + (i % 3) * 14, 2, 4, K.lcy)).join('')), { sun: false }),
-  () => scene(K.lcy, K.blu, at(tri(36, 24, 'g'), 6, 70) + spr(CRISTO, 34, 6) + at(tri(14, 14, 'g'), 96, 70) + at(tri(20, 20, 'g'), 120, 70) +
-    D('M110 42 L140 30', 'none', `stroke="${K.blk}" stroke-width=".5"`) + R(0, 70, 160, 4, K.yel) + waves),
+  // Rio: Corcovado com o Cristo, Pão de Açúcar com bondinho, mar, areia e o calçadão de ondas de Copacabana
+  () => DITHER + grad(0, 58, 'blu', 'lbl', 'lcy') + anim('bob', disc(18, 14, 4, 'yel')) + spr(CLOUD, 96, 12, '', 1) + spr(CLOUD, 20, 30, '', 1) +
+    birds(36, 28) + shape(30, 44, 60, t => 30 * round(t), 'cya') + shape(100, 48, 60, t => 22 * round(t), 'cya') +
+    shape(72, 31, 60, t => 4 + 34 * t ** .8, 'lgn', 'grn') + at(CRISTO, 65, 32, '', 1) +
+    grad(58, 68, 'blu', 'lbl') +
+    shape(118, 46, 60, t => 9 * Math.sqrt(t), 'gry', 'dgr') + shape(140, 31, 60, t => 14 * Math.sqrt(t), 'gry', 'dgr') +
+    shape(130, 54, 60, t => 22 * round(t), 'grn') + line(119, 46, 139, 31, 'blk') + R(128, 39, 2, 2, K.lrd) +
+    anim('bob', R(10, 66, 18, 1, K.wht) + R(60, 65, 24, 1, K.wht) + R(118, 66, 20, 1, K.wht)) +
+    R(0, 68, 160, 12, K.yel) + dith(0, 68, 160, 2, 'yel', 'wht') + R(0, 80, 160, 10, K.wht) + CALCADA,
   () => scene(K.lbl, K.dgr, at(obel(26), 72, 70) + R(74, 30, 2, 2, K.dgr) + at(CASA_ROSADA, 106, 70) + at(TREE, 12, 70) + R(0, 70, 160, 2, K.yel)),
   () => scene(K.lcy, K.blu, at(tri(40, 16, 'g'), 88, 70) + at(LIGHTHOUSE, 122, 40) + anim('blink', R(126, 22, 4, 2, K.wht)) +
     spr(house('M'), 100, 52) + spr(house('y'), 144, 52) + R(0, 66, 90, 4, K.gry) + at(PALM, 14, 66) + at(PALM, 56, 66) +
@@ -297,7 +346,7 @@ function draw(kind, a) {
       at(AGENT, 60, FEET) + at(FLAVIO, 84, FEET) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
   } else if (kind === 'lose') {
     art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET) + anim('away', spr(JET, 70, 40)) +
-      T(80, 12, 7, K.blk, 'tchau, querido...', 'text-anchor="middle"');
+      T(80, 12, 7, K.wht, 'tchau, querido...', 'text-anchor="middle" stroke="#000" stroke-width=".8" paint-order="stroke"');
   }
 }
 
