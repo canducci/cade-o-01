@@ -180,15 +180,15 @@ const waves = anim('bob', R(20, 80, 8, 2, K.lcy) + R(90, 84, 10, 2, K.lcy) + R(1
 const DITHER = '<defs>' + Object.entries(K).map(([k, c]) =>
   `<pattern id="d-${k}" width="2" height="2" patternUnits="userSpaceOnUse">${R(0, 0, 1, 1, c)}${R(1, 1, 1, 1, c)}</pattern>`).join('') + '</defs>';
 const dith = (x, y, w, h, c1, c2) => R(x, y, w, h, K[c1]) + R(x, y, w, h, `url(#d-${c2})`);
-// céu em degradê até y=bottom: pontilhado ordenado (Bayer 4x4), 8 níveis entre cada par de cores
+// degradê vertical (céu, mar) de top a bottom: pontilhado ordenado (Bayer 4x4), 8 níveis entre cada par de cores
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-const sky = (bottom, ...cs) => {
-  const n = (cs.length - 1) * 8, y = j => Math.round(j * bottom / (n + 1));
-  let defs = '', out = R(0, 0, 160, bottom, K[cs.at(-1)]);
+const grad = (top, bottom, ...cs) => {
+  const n = (cs.length - 1) * 8, y = j => top + Math.round(j * (bottom - top) / (n + 1));
+  let defs = '', out = R(0, top, 160, bottom - top, K[cs.at(-1)]);
   for (let j = 0; j < n; j++) {
-    const lvl = j % 8 * 2, next = K[cs[(j >> 3) + 1]], band = (f) => R(0, y(j), 160, y(j + 1) - y(j), f);
-    if (lvl) defs += `<pattern id="sky${j}" width="4" height="4" patternUnits="userSpaceOnUse">${BAYER.map((b, i) => b < lvl ? R(i % 4, i >> 2, 1, 1, next) : '').join('')}</pattern>`;
-    out += band(K[cs[j >> 3]]) + (lvl ? band(`url(#sky${j})`) : '');
+    const lvl = j % 8 * 2, next = K[cs[(j >> 3) + 1]], id = `g${top}-${j}`, band = f => R(0, y(j), 160, y(j + 1) - y(j), f);
+    if (lvl) defs += `<pattern id="${id}" width="4" height="4" patternUnits="userSpaceOnUse">${BAYER.map((b, i) => b < lvl ? R(i % 4, i >> 2, 1, 1, next) : '').join('')}</pattern>`;
+    out += band(K[cs[j >> 3]]) + (lvl ? band(`url(#${id})`) : '');
   }
   return `<defs>${defs}</defs>` + out;
 };
@@ -213,7 +213,7 @@ const CALCADA = [80, 85].map(y => Array.from({ length: 160 }, (_, x) => R(x, y +
 
 const CITY = [
   // Brasília: céu seco, Esplanada, Congresso (torres, cúpula do Senado, cuia da Câmara) e espelho d'água
-  () => DITHER + sky(64, 'blu', 'lbl', 'lcy') + anim('bob', disc(140, 12, 5, 'yel')) + R(18, 14, 34, 1, 'url(#d-wht)') + R(96, 20, 26, 1, 'url(#d-wht)') +
+  () => DITHER + grad(0, 64, 'blu', 'lbl', 'lcy') + anim('bob', disc(140, 12, 5, 'yel')) + R(18, 14, 34, 1, 'url(#d-wht)') + R(96, 20, 26, 1, 'url(#d-wht)') +
     birds(26, 34) + R(0, 60, 160, 4, K.grn) + [4, 18, 31, 128, 141, 154].map(x => R(x, 58, 6, 2, K.grn)).join('') +
     [6, 18, 30, 132, 144].map(ministry).join('') +
     [76, 82].map(x => R(x, 18, 3, 36, K.wht) + R(x + 3, 18, 1, 36, K.gry)).join('') + R(80, 18, 2, 36, K.dgr) +
@@ -221,16 +221,16 @@ const CITY = [
     R(40, 54, 90, 3, K.wht) + R(40, 57, 90, 1, K.gry) + R(44, 58, 82, 6, K.dgr) + R(46, 60, 78, 1, K.blk) +
     shape(58, 47, 54, t => 7 * round(t), 'wht', 'gry') +
     shape(108, 46, 54, t => 3 + 9 * (1 - t) ** 1.5, 'wht', 'gry') + R(98, 46, 20, 1, K.gry) +
-    dith(0, 64, 160, 6, 'blu', 'lbl') + R(76, 64, 8, 5, 'url(#d-gry)') + anim('bob', R(30, 67, 10, 1, K.lcy) + R(110, 66, 14, 1, K.lcy)) +
+    grad(64, 70, 'blu', 'lbl') + R(76, 64, 8, 5, 'url(#d-gry)') + anim('bob', R(30, 67, 10, 1, K.lcy) + R(110, 66, 14, 1, K.lcy)) +
     R(0, 70, 160, 20, K.grn) + dith(0, 70, 160, 2, 'grn', 'lgn'),
   () => scene(K.gry, K.dgr, at(building(10, 24, 'd'), 0, 70) + at(building(8, 19, 'k'), 22, 70) + at(building(9, 26, 'd'), 118, 70) +
     at(building(10, 20, 'k'), 140, 70) + at(MASP, 54, 70) +
     anim('rain', [10, 30, 50, 70, 90, 110, 130, 150].map((x, i) => R(x, 8 + (i % 3) * 14, 2, 4, K.lcy)).join('')), { sun: false }),
   // Rio: Corcovado com o Cristo, Pão de Açúcar com bondinho, mar, areia e o calçadão de ondas de Copacabana
-  () => DITHER + sky(58, 'blu', 'lbl', 'lcy') + anim('bob', disc(18, 14, 4, 'yel')) + spr(CLOUD, 96, 12, '', 1) + spr(CLOUD, 20, 30, '', 1) +
+  () => DITHER + grad(0, 58, 'blu', 'lbl', 'lcy') + anim('bob', disc(18, 14, 4, 'yel')) + spr(CLOUD, 96, 12, '', 1) + spr(CLOUD, 20, 30, '', 1) +
     birds(36, 28) + shape(30, 44, 60, t => 30 * round(t), 'cya') + shape(100, 48, 60, t => 22 * round(t), 'cya') +
     shape(72, 31, 60, t => 4 + 34 * t ** .8, 'lgn', 'grn') + at(CRISTO, 65, 32, '', 1) +
-    R(0, 58, 160, 10, K.blu) + dith(0, 62, 160, 3, 'blu', 'lbl') +
+    grad(58, 68, 'blu', 'lbl') +
     shape(118, 46, 60, t => 9 * Math.sqrt(t), 'gry', 'dgr') + shape(140, 31, 60, t => 14 * Math.sqrt(t), 'gry', 'dgr') +
     shape(130, 54, 60, t => 22 * round(t), 'grn') + line(119, 46, 139, 31, 'blk') + R(128, 39, 2, 2, K.lrd) +
     anim('bob', R(10, 66, 18, 1, K.wht) + R(60, 65, 24, 1, K.wht) + R(118, 66, 20, 1, K.wht)) +
