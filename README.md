@@ -2,6 +2,10 @@
 
 Jogo satírico de perseguição geográfica, em pt-BR, rodando no browser via WebAssembly (Rust puro, sem dependências).
 
+**Jogar:** https://canducci.github.io/cade-o-01/
+
+O branch `gh-pages` é gerado pelo CI (`.github/workflows/pages.yml`) a cada push no `main`.
+
 > Paródia. Personagem inspirado em figura pública real. As acusações seguem reportagens e aparecem com o status de cada caso (seção *Dossiês* no jogo). Não há condenação nos casos citados e vale a presunção de inocência.
 
 ## Rodar
