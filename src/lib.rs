@@ -190,6 +190,7 @@ pub struct Game {
     provas: u32,
     prova_slot: usize,
     prova_taken: bool,
+    last_ask: Option<usize>,
     mandado: bool,
     witnesses: [usize; 3],
     dests: Vec<usize>,
@@ -201,7 +202,7 @@ impl Game {
     pub fn new(seed: u32) -> Game {
         Game {
             rng: seed as u64 | 1, screen: Screen::Title, case: 0, route: vec![], step: 0, here: 0,
-            hours: HOURS, provas: 0, prova_slot: 0, prova_taken: false, mandado: false,
+            hours: HOURS, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false,
             witnesses: [0, 1, 2], dests: vec![], msg: String::new(), end: String::new(),
         }
     }
@@ -242,6 +243,7 @@ impl Game {
         self.here = city;
         self.prova_slot = self.rand(3);
         self.prova_taken = false;
+        self.last_ask = None;
         let mut w = [0; 3];
         for i in 0..3 {
             loop {
@@ -264,6 +266,7 @@ impl Game {
     }
 
     fn ask(&mut self, slot: usize) {
+        self.last_ask = Some(slot);
         self.hours -= H_ASK;
         let who = WITNESSES[self.witnesses[slot]];
         if !self.on_trail() {
@@ -391,7 +394,9 @@ impl Game {
         match self.screen {
             Screen::Title => "@title".into(),
             Screen::DossieList | Screen::Dossie(_) => "@dossie".into(),
-            Screen::Brief | Screen::City => format!("@city {}", self.here),
+            Screen::Brief => format!("@brief {}", self.here),
+            Screen::City => format!("@city {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
+                self.last_ask.map_or(0, |s| s + 1)),
             Screen::Travel => format!("@travel {} {}", self.here, self.dests.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" ")),
             Screen::End => format!("@{} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here),
         }
