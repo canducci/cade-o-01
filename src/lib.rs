@@ -193,6 +193,8 @@ const H_ASK: i32 = 2;
 const H_TRAVEL: i32 = 8;
 const H_WARRANT: i32 = 3;
 const NEED: u32 = 2;
+// Modo difícil: 1 em ARCHIVE_ODDS viagens termina em arquivamento.
+const ARCHIVE_ODDS: usize = 10;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum Screen { Title, DossieList, Dossie(usize), Brief, City, Travel, End }
@@ -210,6 +212,7 @@ pub struct Game {
     prova_taken: bool,
     last_ask: Option<usize>,
     mandado: bool,
+    hard: bool,
     witnesses: [usize; 3],
     dests: Vec<usize>,
     msg: String,
@@ -220,7 +223,7 @@ impl Game {
     pub fn new(seed: u32) -> Game {
         Game {
             rng: seed as u64 | 1, screen: Screen::Title, case: 0, route: vec![], step: 0, here: 0,
-            hours: HOURS, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false,
+            hours: HOURS, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false, hard: false,
             witnesses: [0, 1, 2], dests: vec![], msg: String::new(), end: String::new(),
         }
     }
@@ -235,7 +238,8 @@ impl Game {
     fn last(&self) -> usize { self.route.len() - 1 }
     fn on_trail(&self) -> bool { self.here == self.route[self.step] }
 
-    fn new_case(&mut self) {
+    fn new_case(&mut self, hard: bool) {
+        self.hard = hard;
         self.case = self.rand(CASES.len());
         let c = &CASES[self.case];
         self.route = if c.fixed.is_empty() {
@@ -328,6 +332,10 @@ impl Game {
 
     fn travel(&mut self, dest: usize) {
         self.hours -= H_TRAVEL;
+        if self.hard && self.rand(ARCHIVE_ODDS) == 0 {
+            self.finish("📁 O relator, terrivelmente evangélico, pediu vista, orou sobre o processo e arquivou o caso.\nO 01 agradece a Deus nas redes.\n\n❌ CASO ARQUIVADO.".into());
+            return;
+        }
         if self.on_trail() && self.step < self.last() && dest == self.route[self.step + 1] {
             self.step += 1;
         }
@@ -349,7 +357,7 @@ impl Game {
             // A piada: cada prova pode ser anulada no caminho.
             let mut annulled = 0;
             for _ in 0..self.provas {
-                if self.rand(3) == 0 { annulled += 1; }
+                if self.rand(if self.hard { 2 } else { 3 }) == 0 { annulled += 1; }
             }
             self.provas -= annulled;
             self.msg = if annulled > 0 { format!("🗑️ {} prova(s) anulada(s) por questões processuais. ", annulled) } else { String::new() };
@@ -365,7 +373,7 @@ impl Game {
 
     fn options(&self) -> Vec<String> {
         match self.screen {
-            Screen::Title => vec!["Novo caso".into(), "Dossiês: os casos reais".into()],
+            Screen::Title => vec!["Novo caso".into(), "Novo caso — modo difícil: Relator Terrivelmente Evangélico".into(), "Dossiês: os casos reais".into()],
             Screen::DossieList => CASES.iter().map(|c| c.title.to_string()).chain(["Voltar".to_string()]).collect(),
             Screen::Dossie(_) => vec!["Voltar".into()],
             Screen::Brief => vec!["Começar a perseguição".into()],
@@ -383,7 +391,11 @@ impl Game {
     pub fn act(&mut self, i: usize) {
         if i >= self.options().len() { return; }
         match self.screen {
-            Screen::Title => if i == 0 { self.new_case() } else { self.screen = Screen::DossieList },
+            Screen::Title => match i {
+                0 => self.new_case(false),
+                1 => self.new_case(true),
+                _ => self.screen = Screen::DossieList,
+            },
             Screen::DossieList => self.screen = if i < CASES.len() { Screen::Dossie(i) } else { Screen::Title },
             Screen::Dossie(_) => self.screen = Screen::DossieList,
             Screen::Brief => self.screen = Screen::City,
@@ -395,14 +407,14 @@ impl Game {
             Screen::Travel => if i < self.dests.len() { self.travel(self.dests[i]) } else { self.screen = Screen::City },
             Screen::End => match i {
                 0 => self.screen = Screen::Dossie(self.case),
-                1 => self.new_case(),
+                1 => self.new_case(self.hard),
                 _ => self.screen = Screen::Title,
             },
         }
     }
 
     fn header(&self) -> String {
-        format!("📍 {}   ⏳ {}h   📎 Provas: {}   ⚖️ Mandado: {}\n\n",
+        format!("{}📍 {}   ⏳ {}h   📎 Provas: {}   ⚖️ Mandado: {}\n\n", if self.hard { "⛪ " } else { "" },
             CITIES[self.here].name, self.hours, self.provas, if self.mandado { "sim" } else { "não" })
     }
 
@@ -431,8 +443,9 @@ Você é agente da Divisão de Fugas Improváveis. Siga as pistas, junte provas,
             Screen::Dossie(i) => CASES[i].dossie.into(),
             Screen::Brief => format!("CASO: {}\n\n{}\n\nPonto de partida: {}. Você tem {}h.\n\
 Interrogar: {}h · Viajar: {}h · Mandado: {}h (precisa de {} provas; algumas podem ser anuladas).\n\
-O mandado tem que estar na mão antes de alcançar o 01.",
-                CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, HOURS, H_ASK, H_TRAVEL, H_WARRANT, NEED),
+O mandado tem que estar na mão antes de alcançar o 01.{}",
+                CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, HOURS, H_ASK, H_TRAVEL, H_WARRANT, NEED,
+                if self.hard { format!("\n\n⛪ Modo Relator Terrivelmente Evangélico: cada viagem tem 1 em {} de chance de o caso ser arquivado, e metade das provas tende a ser anulada.", ARCHIVE_ODDS) } else { String::new() }),
             Screen::City => format!("{}{}\n\n{}", self.header(), CITIES[self.here].desc, self.msg),
             Screen::Travel => format!("{}Para onde?", self.header()),
             Screen::End => format!("CASO: {}\n\n{}", CASES[self.case].title, self.end),
@@ -478,17 +491,20 @@ pub extern "C" fn out_len() -> usize { OUT.with(|o| o.borrow().len()) }
 mod tests {
     use super::*;
 
-    fn begin(seed: u32) -> Game {
+    fn begin(seed: u32) -> Game { begin_mode(seed, 0) }
+
+    // opt 0 = normal, 1 = difícil
+    fn begin_mode(seed: u32, opt: usize) -> Game {
         let mut g = Game::new(seed);
-        g.act(0); // novo caso
+        g.act(opt); // novo caso
         g.act(0); // começar
         g
     }
 
     // Joga o caminho certo: interroga todos, viaja pro destino correto, pede mandado no fim.
-    fn play_perfect(seed: u32) -> String {
-        let mut g = begin(seed);
-        while g.step < g.last() {
+    fn play_perfect(seed: u32, opt: usize) -> String {
+        let mut g = begin_mode(seed, opt);
+        while g.step < g.last() && g.screen != Screen::End {
             for s in 0..3 { g.act(s); }
             g.act(3);
             let next = g.route[g.step + 1];
@@ -496,6 +512,7 @@ mod tests {
             assert_eq!(g.dests.len(), 4);
             g.act(i);
         }
+        if g.screen == Screen::End { return g.end; } // arquivado no caminho
         g.act(4); // mandado
         g.act(0); // confronto
         assert_eq!(g.screen, Screen::End);
@@ -504,8 +521,18 @@ mod tests {
 
     #[test]
     fn perfect_play_can_win() {
-        let wins = (1..50).filter(|&s| play_perfect(s).contains("CASO ENCERRADO")).count();
+        let wins = (1..50).filter(|&s| play_perfect(s, 0).contains("CASO ENCERRADO")).count();
         assert!(wins > 20, "wins={}", wins);
+    }
+
+    #[test]
+    fn hard_mode_archives_and_wins_less() {
+        let ends = |opt| (1..200).map(|s| play_perfect(s, opt)).collect::<Vec<_>>();
+        let (normal, hard) = (ends(0), ends(1));
+        let wins = |e: &[String]| e.iter().filter(|t| t.contains("CASO ENCERRADO")).count();
+        assert!(hard.iter().any(|t| t.contains("ARQUIVADO")));
+        assert!(!normal.iter().any(|t| t.contains("ARQUIVADO")));
+        assert!(wins(&hard) > 0 && wins(&hard) < wins(&normal), "hard={} normal={}", wins(&hard), wins(&normal));
     }
 
     #[test]
