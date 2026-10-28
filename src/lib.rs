@@ -208,7 +208,13 @@ const PROVAS: [&str; 6] = [
     "um recibo de bombons", "um áudio vazado", "uma planilha misteriosa",
 ];
 
-const HOURS: i32 = 80;
+// carreira: (casos resolvidos para chegar, posto, abreviação, prazo em horas)
+// 64h é o piso: 5 cidades jogadas sem erro, interrogando todos, gastam 61h.
+const RANKS: [(u32, &str, &str, i32); 5] = [
+    (0, "Estagiário", "Estag.", 80), (1, "Agente", "Ag.", 76), (3, "Agente especial", "Ag. esp.", 72),
+    (6, "Delegado", "Del.", 68), (10, "Delegado-chefe", "Del.-chefe", 64),
+];
+fn rank(solved: u32) -> usize { RANKS.iter().rposition(|r| solved >= r.0).unwrap() }
 const H_ASK: i32 = 2;
 const H_TRAVEL: i32 = 8;
 const H_WARRANT: i32 = 3;
@@ -233,6 +239,7 @@ pub struct Game {
     last_ask: Option<usize>,
     mandado: bool,
     hard: bool,
+    solved: u32,
     witnesses: [usize; 3],
     dests: Vec<usize>,
     msg: String,
@@ -240,10 +247,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(seed: u32) -> Game {
+    pub fn new(seed: u32, solved: u32) -> Game {
         Game {
             rng: seed as u64 | 1, screen: Screen::Title, case: 0, route: vec![], step: 0, here: 0,
-            hours: HOURS, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false, hard: false,
+            hours: RANKS[rank(solved)].3, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false, hard: false, solved,
             witnesses: [0, 1, 2], dests: vec![], msg: String::new(), end: String::new(),
         }
     }
@@ -254,6 +261,8 @@ impl Game {
         self.rng ^= self.rng << 17;
         (self.rng % n as u64) as usize
     }
+
+    fn deadline(&self) -> i32 { RANKS[rank(self.solved)].3 }
 
     fn last(&self) -> usize { self.route.len() - 1 }
     fn on_trail(&self) -> bool { self.here == self.route[self.step] }
@@ -273,7 +282,7 @@ impl Game {
             c.fixed.to_vec()
         };
         self.step = 0;
-        self.hours = HOURS;
+        self.hours = self.deadline();
         self.provas = 0;
         self.mandado = false;
         self.msg.clear();
@@ -316,7 +325,11 @@ impl Game {
         } else if self.step == self.last() {
             let city = CITIES[self.here].name;
             if self.mandado {
-                self.finish(format!("🚔 {} aponta uma esquina de {}. Lá está ele, de boné e óculos escuros.\nVocê mostra o mandado do STF.\n\"Isso é perseguição!\", declara o 01, antes de pedir pra falar com o advogado.\n\n🏆 CASO ENCERRADO (por enquanto — ainda cabe recurso).", who, city));
+                let before = rank(self.solved);
+                self.solved += if self.hard { 2 } else { 1 };
+                let now = rank(self.solved);
+                let promo = if now > before { format!("\n\n⭐ Promovido a {}!", RANKS[now].1) } else { String::new() };
+                self.finish(format!("🚔 {} aponta uma esquina de {}. Lá está ele, de boné e óculos escuros.\nVocê mostra o mandado do STF.\n\"Isso é perseguição!\", declara o 01, antes de pedir pra falar com o advogado.\n\n🏆 CASO ENCERRADO (por enquanto — ainda cabe recurso).{}", who, city, promo));
             } else {
                 self.finish(format!("🛩️ {} aponta uma esquina de {}. Lá está ele!\nMas você não tem mandado. Ele acena, sorri e embarca num jatinho.\n\n❌ Sem mandado, sem prisão. Junte provas e peça ao STF antes do confronto.", who, city));
             }
@@ -435,8 +448,15 @@ impl Game {
     }
 
     fn header(&self) -> String {
-        format!("{}📍 {}   ⏳ {}h   📎 Provas: {}   ⚖️ Mandado: {}\n\n", if self.hard { "⛪ " } else { "" },
+        format!("{}👮 {}   📍 {}   ⏳ {}h   📎 Provas: {}   ⚖️ Mandado: {}\n\n", if self.hard { "⛪ " } else { "" }, RANKS[rank(self.solved)].2,
             CITIES[self.here].name, self.hours, self.provas, if self.mandado { "sim" } else { "não" })
+    }
+
+    fn career(&self) -> String {
+        let r = rank(self.solved);
+        let next = RANKS.get(r + 1).map_or(String::new(), |n| format!(" (falta {} para {})", n.0 - self.solved, n.1));
+        format!("\n\nPosto: {} · {} caso{} resolvido{}{}", RANKS[r].1, self.solved,
+            if self.solved == 1 { "" } else { "s" }, if self.solved == 1 { "" } else { "s" }, next)
     }
 
     // Primeira linha "@cena args" diz ao JS o que desenhar.
@@ -447,26 +467,28 @@ impl Game {
             Screen::Brief => format!("@brief {}", self.here),
             // @city cidade w0 w1 w2 quem_fala no_rastro horas prazo
             Screen::City => format!("@city {} {} {} {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
-                self.last_ask.map_or(0, |s| s + 1), self.on_trail() as u8, self.hours.max(0), HOURS),
+                self.last_ask.map_or(0, |s| s + 1), self.on_trail() as u8, self.hours.max(0), self.deadline()),
             Screen::Travel => format!("@travel {} {}", self.here, self.dests.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" ")),
-            Screen::End => format!("@{} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here),
+            // @win/@lose cidade casos_resolvidos (o JS salva o total)
+            Screen::End => format!("@{} {} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here, self.solved),
         }
     }
 
     pub fn render(&self) -> String {
         let mut s = self.scene() + "\n";
         s += &match self.screen {
-            Screen::Title => "CADÊ O 01?\nUma perseguição satírica pelo mundo\n\n\
+            Screen::Title => "Uma perseguição satírica pelo mundo.\n\
 ⚠️ PARÓDIA. Personagem inspirado em figura pública real. As acusações são descritas conforme reportagens, \
 com o status de cada caso na seção Dossiês. Não há condenação nos casos citados e vale a presunção de inocência. \
 Pistas, testemunhas e fugas no jogo são ficção.\n\n\
-Você é agente da Divisão de Fugas Improváveis. Siga as pistas, junte provas, peça o mandado e alcance o 01 antes do prazo.".to_string(),
+Você é agente da Divisão de Fugas Improváveis. Siga as pistas, junte provas, peça o mandado e alcance o 01 antes do prazo.".to_string()
+                + &self.career(),
             Screen::DossieList => "DOSSIÊS\nO que dizem as investigações e reportagens (status em 28/10/2026).".into(),
             Screen::Dossie(i) => CASES[i].dossie.into(),
-            Screen::Brief => format!("CASO: {}\n\n{}\n\nPonto de partida: {}. Você tem {}h.\n\
+            Screen::Brief => format!("CASO: {}\n\n{}\n\nPonto de partida: {}. Posto: {}. Você tem {}h.\n\
 Interrogar: {}h · Viajar: {}h · Mandado: {}h (precisa de {} provas; algumas podem ser anuladas).\n\
 O mandado tem que estar na mão antes de alcançar o 01.{}",
-                CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, HOURS, H_ASK, H_TRAVEL, H_WARRANT, NEED,
+                CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, RANKS[rank(self.solved)].1, self.hours, H_ASK, H_TRAVEL, H_WARRANT, NEED,
                 if self.hard { format!("\n\n⛪ Modo Relator Terrivelmente Evangélico: cada viagem tem 1 em {} de chance de o caso ser arquivado, e metade das provas tende a ser anulada.", ARCHIVE_ODDS) } else { String::new() }),
             Screen::City => format!("{}{}\n\n{}", self.header(), CITIES[self.here].desc, self.msg),
             Screen::Travel => format!("{}Para onde?", self.header()),
@@ -483,7 +505,7 @@ O mandado tem que estar na mão antes de alcançar o 01.{}",
 // --- ponte wasm: o JS chama start/act e lê o texto em out_ptr/out_len ---
 
 thread_local! {
-    static GAME: RefCell<Game> = RefCell::new(Game::new(1));
+    static GAME: RefCell<Game> = RefCell::new(Game::new(1, 0));
     static OUT: RefCell<String> = RefCell::new(String::new());
 }
 
@@ -492,8 +514,8 @@ fn publish() {
 }
 
 #[no_mangle]
-pub extern "C" fn start(seed: u32) {
-    GAME.with(|g| *g.borrow_mut() = Game::new(seed));
+pub extern "C" fn start(seed: u32, solved: u32) {
+    GAME.with(|g| *g.borrow_mut() = Game::new(seed, solved));
     publish();
 }
 
@@ -516,16 +538,20 @@ mod tests {
     fn begin(seed: u32) -> Game { begin_mode(seed, 0) }
 
     // opt 0 = normal, 1 = difícil
-    fn begin_mode(seed: u32, opt: usize) -> Game {
-        let mut g = Game::new(seed);
+    fn begin_mode(seed: u32, opt: usize) -> Game { begin_at(seed, opt, 0) }
+
+    fn begin_at(seed: u32, opt: usize, solved: u32) -> Game {
+        let mut g = Game::new(seed, solved);
         g.act(opt); // novo caso
         g.act(0); // começar
         g
     }
 
     // Joga o caminho certo: interroga todos, viaja pro destino correto, pede mandado no fim.
-    fn play_perfect(seed: u32, opt: usize) -> String {
-        let mut g = begin_mode(seed, opt);
+    fn play_perfect(seed: u32, opt: usize) -> String { play_perfect_at(seed, opt, 0).render() }
+
+    fn play_perfect_at(seed: u32, opt: usize, solved: u32) -> Game {
+        let mut g = begin_at(seed, opt, solved);
         while g.step < g.last() && g.screen != Screen::End {
             for s in 0..3 { g.act(s); }
             g.act(3);
@@ -534,11 +560,44 @@ mod tests {
             assert_eq!(g.dests.len(), 4);
             g.act(i);
         }
-        if g.screen == Screen::End { return g.end; } // arquivado no caminho
+        if g.screen == Screen::End { return g; } // arquivado no caminho
         g.act(4); // mandado
         g.act(0); // confronto
         assert_eq!(g.screen, Screen::End);
-        g.end
+        g
+    }
+
+    // total de casos que a cena de fim manda o JS salvar
+    fn end_total(g: &Game) -> u32 {
+        g.render().lines().next().unwrap().split(' ').nth(2).unwrap().parse().unwrap()
+    }
+
+    #[test]
+    fn rank_sets_deadline() {
+        let brief = |solved| { let mut g = Game::new(1, solved); g.act(0); g.render() };
+        assert!(brief(0).contains("Estagiário") && brief(0).contains("Você tem 80h"), "{}", brief(0));
+        assert!(brief(12).contains("Delegado-chefe") && brief(12).contains("Você tem 64h"), "{}", brief(12));
+        let title = Game::new(1, 2).render();
+        assert!(title.contains("Agente · 2 casos resolvidos (falta 1 para Agente especial)"), "{}", title);
+    }
+
+    #[test]
+    fn wins_count_and_promote() {
+        let won = |opt, solved| (1..200).map(|s| play_perfect_at(s, opt, solved))
+            .find(|g| g.render().contains("CASO ENCERRADO")).unwrap();
+        assert_eq!(end_total(&won(0, 0)), 1);
+        assert!(won(0, 0).render().contains("⭐ Promovido a Agente!"));
+        assert!(!won(0, 1).render().contains("Promovido"));
+        assert_eq!(end_total(&won(1, 5)), 7);
+        assert!(won(1, 5).render().contains("⭐ Promovido a Delegado!"));
+        let lost = (1..200).map(|s| play_perfect_at(s, 0, 4)).find(|g| !g.render().contains("CASO ENCERRADO")).unwrap();
+        assert_eq!(end_total(&lost), 4);
+    }
+
+    #[test]
+    fn top_rank_still_winnable() {
+        let wins = (1..100).filter(|&s| play_perfect_at(s, 0, 10).render().contains("CASO ENCERRADO")).count();
+        assert!(wins > 40, "wins={}", wins);
     }
 
     #[test]
@@ -579,7 +638,7 @@ mod tests {
 
     #[test]
     fn witnesses_are_two_locals_and_one_generic() {
-        let mut g = Game::new(3);
+        let mut g = Game::new(3, 0);
         for city in 0..CITIES.len() {
             g.arrive(city);
             let locals: Vec<_> = g.witnesses.iter().filter(|&&w| w >= WITNESSES.len()).collect();

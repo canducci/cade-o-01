@@ -353,6 +353,7 @@ function show() {
     draw(kind, a);
     type(body);
     if (kind === 'win') siren();
+    if (kind === 'win' || kind === 'lose') try { localStorage.solved = a[1]; } catch {}
     if (kind === 'lose') beep(440, 900, 110);
   };
   const flying = scene0 === 'travel' && kind !== 'travel' && a[0] !== city0;
@@ -369,7 +370,10 @@ function show() {
 }
 
 addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); const n = +e.key; if (n >= 1 && n <= opts.children.length) choose(n - 1); });
-w.start(Date.now() >>> 0);
+// carreira: total de casos resolvidos; valor ausente ou inválido vale 0
+let solved = 0;
+try { const v = Number(localStorage.solved ?? 0); if (Number.isSafeInteger(v) && v >= 0) solved = v; } catch {}
+w.start(Date.now() >>> 0, solved);
 show();
 </script>
 </body>
