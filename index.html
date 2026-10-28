@@ -180,11 +180,17 @@ const waves = anim('bob', R(20, 80, 8, 2, K.lcy) + R(90, 84, 10, 2, K.lcy) + R(1
 const DITHER = '<defs>' + Object.entries(K).map(([k, c]) =>
   `<pattern id="d-${k}" width="2" height="2" patternUnits="userSpaceOnUse">${R(0, 0, 1, 1, c)}${R(1, 1, 1, 1, c)}</pattern>`).join('') + '</defs>';
 const dith = (x, y, w, h, c1, c2) => R(x, y, w, h, K[c1]) + R(x, y, w, h, `url(#d-${c2})`);
-// céu em faixas até y=bottom: cor, meio-tom, próxima cor...
+// céu em degradê até y=bottom: pontilhado ordenado (Bayer 4x4), 8 níveis entre cada par de cores
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const sky = (bottom, ...cs) => {
-  const h = bottom / (2 * cs.length - 1), y = k => Math.round(k * h);
-  return R(0, 0, 160, bottom, K[cs.at(-1)]) + cs.slice(0, -1).map((c, i) =>
-    R(0, y(2 * i), 160, y(2 * i + 1) - y(2 * i), K[c]) + dith(0, y(2 * i + 1), 160, y(2 * i + 2) - y(2 * i + 1), c, cs[i + 1])).join('');
+  const n = (cs.length - 1) * 8, y = j => Math.round(j * bottom / (n + 1));
+  let defs = '', out = R(0, 0, 160, bottom, K[cs.at(-1)]);
+  for (let j = 0; j < n; j++) {
+    const lvl = j % 8 * 2, next = K[cs[(j >> 3) + 1]], band = (f) => R(0, y(j), 160, y(j + 1) - y(j), f);
+    if (lvl) defs += `<pattern id="sky${j}" width="4" height="4" patternUnits="userSpaceOnUse">${BAYER.map((b, i) => b < lvl ? R(i % 4, i >> 2, 1, 1, next) : '').join('')}</pattern>`;
+    out += band(K[cs[j >> 3]]) + (lvl ? band(`url(#sky${j})`) : '');
+  }
+  return `<defs>${defs}</defs>` + out;
 };
 // forma desenhada linha a linha: meia-largura f(t), t de 0 (topo) a 1 (base); lado esquerdo iluminado
 const shape = (cx, top, bottom, f, lit, shade = lit) => Array.from({ length: bottom - top }, (_, j) => {
