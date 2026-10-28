@@ -121,6 +121,8 @@ struct Case {
     start: usize,
     fixed: &'static [usize],
     dossie: &'static str,
+    // (veículo e data, URL da reportagem)
+    fontes: &'static [(&'static str, &'static str)],
 }
 
 const CASES: &[Case] = &[
@@ -128,57 +130,83 @@ const CASES: &[Case] = &[
         brief: "Segundo o MP-RJ, pedaços dos salários de assessores da ALERJ tomaram rumo ignorado. O 01 também tomou rumo ignorado. Coincidência?",
         dossie: "RACHADINHA NA ALERJ\n\
 Alegação: o MP-RJ denunciou Flávio em nov/2020 por peculato, lavagem de dinheiro e organização criminosa, apontando um esquema de recolhimento de salários de assessores da ALERJ operado por Fabrício Queiroz (R$ 6,1 mi, segundo o MP).\n\
-Status: denúncia rejeitada em 2022, depois que STJ e STF anularam provas. O MP pediu a extinção; a decisão não impede nova investigação com provas válidas.\n\
-Defesa: nega ter cometido crimes e diz que o caso está encerrado.\n\
-Fontes: brasildefato.com.br (03/10/2026); infomoney.com.br" },
+Status: denúncia rejeitada pelo TJ-RJ em mai/2022, depois que STJ e STF anularam provas e o próprio MP pediu a anulação. A decisão não impede nova investigação com provas válidas.\n\
+Defesa: nega ter cometido crimes e diz que o caso está encerrado.",
+        fontes: &[
+            ("Brasil de Fato, 03/10/2026", "https://www.brasildefato.com.br/2026/10/03/flavio-bolsonaro-chega-ao-primeiro-turno-investigado-pela-pf-com-relacoes-com-vorcaro-expostas-e-vice-suspeito-de-estupro/"),
+            ("InfoMoney, 17/05/2022", "https://www.infomoney.com.br/politica/tj-do-rio-arquiva-denuncia-do-mp-contra-flavio-bolsonaro-em-caso-das-rachadinhas/"),
+            ("InfoMoney, 27/02/2025", "https://www.infomoney.com.br/politica/gilmar-nega-recursos-e-mantem-arquivado-caso-das-rachadinhas-de-flavio-bolsonaro/"),
+            ("Poder360, 04/02/2021 (valor de R$ 6,1 mi)", "https://www.poder360.com.br/brasil/flavio-bolsonaro-entrega-loja-de-chocolates-investigada-pelo-mp/")] },
     Case { title: "Bombons Recheados", start: RIO, fixed: &[],
         brief: "Uma franquia de chocolates num shopping da Barra virou assunto do MP. O dono sumiu antes da Páscoa.",
         dossie: "FRANQUIA DE CHOCOLATES (KOPENHAGEN)\n\
-Alegação: o MP-RJ apurou se a franquia comprada por Flávio e pelo sócio Alexandre Santini serviu para lavar até R$ 1,6 mi do suposto esquema da ALERJ.\n\
-Status: linha de investigação do caso da rachadinha, cuja denúncia foi rejeitada em 2022. A loja foi entregue/fechada.\n\
-Defesa: nega. \"Se eu quisesse lavar dinheiro, abriria uma franquia?\"\n\
-Fontes: opovo.com.br (2020); folhape.com.br; poder360.com.br" },
+Alegação: o MP-RJ apurou se a franquia de Flávio e do sócio Alexandre Santini serviu para lavar dinheiro do suposto esquema da ALERJ: ao menos R$ 2,1 mi, sendo R$ 500 mil na compra da loja e R$ 1,6 mi movimentados na conta da empresa.\n\
+Status: linha de investigação do caso da rachadinha, cuja denúncia foi rejeitada em 2022. A loja foi entregue e fechada em 2021.\n\
+Defesa: nega. Em 2019: \"Se eu quisesse lavar dinheiro iria abrir uma franquia, que tem um controle externo da franquiadora e auditoria?\"",
+        fontes: &[
+            ("O Povo, 20/08/2020", "https://www.opovo.com.br/noticias/politica/2020/08/20/investigacao-apura-se-loja-de-flavio-bolsonaro--lavou--r--2-1-milhoes.html"),
+            ("Poder360, 04/02/2021", "https://www.poder360.com.br/brasil/flavio-bolsonaro-entrega-loja-de-chocolates-investigada-pelo-mp/"),
+            ("Folha de Pernambuco, 21/10/2026", "https://www.folhape.com.br/politica/de-rachadinha-a-dark-horse-flavio-bolsonaro-e-alvo-de/519718/"),
+            ("Correio, 19/12/2019 (frase da defesa)", "https://www.correio24horas.com.br/brasil/flavio-bolsonaro-nega-rachadinhas-com-queiroz-iria-abrir-franquia-1219")] },
     Case { title: "Imóveis no Dinheiro Vivo", start: RIO, fixed: &[],
         brief: "Corretores de Copacabana relatam pagamentos em espécie. O cliente pagou à vista e saiu à francesa.",
         dossie: "IMÓVEIS EM DINHEIRO VIVO\n\
-Alegação: o MP-RJ apontou depósito de R$ 638,4 mil em espécie na conta de um corretor e suspeita de lucro artificial de R$ 800 mil com dois apartamentos em Copacabana. Levantamento do UOL listou 16 imóveis comprados com dinheiro vivo pela família (movimentação acima de R$ 3 mi).\n\
+Alegação: o MP-RJ apontou depósito de R$ 638,4 mil em espécie na conta de um corretor e \"ganhos artificialmente produzidos\" de R$ 800 mil com dois apartamentos em Copacabana. Um levantamento do UOL identificou 16 imóveis comprados ao menos em parte com dinheiro vivo, e a movimentação em espécie atribuída a Flávio passaria de R$ 3 mi.\n\
 Status: parte do caso da rachadinha (denúncia rejeitada em 2022). Transação em espécie não é crime por si só.\n\
-Defesa: nega irregularidades.\n\
-Fontes: infomoney.com.br; brasildefato.com.br (03/10/2026)" },
+Defesa: nega irregularidades.",
+        fontes: &[
+            ("InfoMoney, 19/12/2019", "https://www.infomoney.com.br/politica/promotores-investigam-se-flavio-bolsonaro-lavou-r-638-mil-de-rachadinha-com-imoveis/"),
+            ("Brasil de Fato, 03/10/2026", "https://www.brasildefato.com.br/2026/10/03/flavio-bolsonaro-chega-ao-primeiro-turno-investigado-pela-pf-com-relacoes-com-vorcaro-expostas-e-vice-suspeito-de-estupro/")] },
     Case { title: "A Mansão do Lago", start: BSB, fixed: &[],
         brief: "Uma mansão de R$ 6 milhões em Brasília está com as luzes apagadas. O morador saiu pra comprar pão. Em outro continente.",
         dossie: "MANSÃO EM BRASÍLIA\n\
-Fato: em 2021 Flávio comprou uma casa de cerca de R$ 6 mi em Brasília, com financiamento bancário. A compra foi questionada na imprensa.\n\
+Fato: em 2021 Flávio comprou uma casa por R$ 5,97 mi em Brasília, com R$ 3,1 mi financiados pelo BRB, banco público do DF. O MP-DF abriu procedimento para apurar se o empréstimo saiu fora das condições normais do banco.\n\
 Status: nas fontes consultadas não há acusação criminal sobre a compra.\n\
-Defesa: nega irregularidades na compra.\n\
-Fonte: poder360.com.br" },
+Defesa: nega irregularidades na compra.",
+        fontes: &[
+            ("Poder360, 02/03/2021", "https://www.poder360.com.br/congresso/flavio-bolsonaro-nega-irregularidades-em-compra-de-mansao-por-r-6-milhoes/"),
+            ("Poder360, 06/04/2021", "https://www.poder360.com.br/congresso/mp-investiga-emprestimo-do-brb-para-flavio-bolsonaro-comprar-mansao/")] },
     Case { title: "Dark Horse", start: SP, fixed: &[],
         brief: "A PF segue o dinheiro de um banqueiro para uma cinebiografia. O produtor-executivo informal sumiu antes dos créditos.",
         dossie: "DARK HORSE / VORCARO\n\
-Alegação: a PF investiga pagamentos do ex-banqueiro Daniel Vorcaro (Banco Master) ao filme 'Dark Horse', sobre Jair Bolsonaro. Segundo o The Intercept, Flávio pediu dinheiro a Vorcaro; a PF o aponta como interlocutor direto. Suspeitas: lavagem, corrupção e evasão de divisas.\n\
-Status: inquérito no STF aberto em jul/2026 (min. André Mendonça), em andamento.\n\
-Defesa: nega vantagem indevida; diz que foi \"patrocínio privado para um filme privado\".\n\
-Fontes: agenciabrasil.ebc.com.br (27/10/2026); brasildefato.com.br (03/10/2026)" },
+Alegação: a PF investiga pagamentos do ex-banqueiro Daniel Vorcaro (Banco Master) ao filme 'Dark Horse', sobre Jair Bolsonaro. O The Intercept Brasil publicou áudios de Flávio pedindo recursos a Vorcaro para o filme. Suspeitas: lavagem, corrupção e evasão de divisas.\n\
+Status: Flávio foi incluído no inquérito do STF em jul/2026 (min. André Mendonça); em andamento.\n\
+Defesa: nega vantagem indevida; diz que foi \"patrocínio privado para um filme privado\".",
+        fontes: &[
+            ("Agência Brasil, 11/09/2026", "https://agenciabrasil.ebc.com.br/justica/noticia/2026-09/mendonca-incluiu-flavio-bolsonaro-como-investigado-no-caso-dark-horse"),
+            ("Brasil de Fato, 03/10/2026", "https://www.brasildefato.com.br/2026/10/03/flavio-bolsonaro-chega-ao-primeiro-turno-investigado-pela-pf-com-relacoes-com-vorcaro-expostas-e-vice-suspeito-de-estupro/"),
+            ("Agência Brasil, 27/10/2026", "https://agenciabrasil.ebc.com.br/politica/noticia/2026-10/policia-federal-cancela-passaportes-de-flavio-bolsonaro")] },
     Case { title: "Aposta Perdida", start: BSB, fixed: &[],
         brief: "Um inquérito sobre bets cita o nome do senador. Ele apostou que não ia ficar pra ver o resultado.",
         dossie: "BETS / WILLER TOMAZ\n\
-Alegação: inquérito sobre suposta lavagem de dinheiro do advogado Willer Tomaz em negócios com bets. O nome do senador foi citado por uma secretária, sobre uma conta ligada à Alcazar Holdings (Ilha da Madeira).\n\
-Status: inquérito no STF (relator min. Alexandre de Moraes), em andamento.\n\
-Defesa: o senador nega irregularidades.\n\
-Fonte: agenciabrasil.ebc.com.br (27/10/2026)" },
+Alegação: Flávio e o advogado Willer Tomaz são investigados no STF por suposta lavagem de dinheiro em negócios com bets. Segundo a PF, o senador seria beneficiário de recursos da Alcazar Holdings, sediada na Ilha da Madeira. Em 2025, uma secretária de Tomaz pediu ao Santander que tirasse o nome de Flávio da conta da empresa, onde ele aparecia como \"usuário master\".\n\
+Status: inquérito no STF sob o min. Alexandre de Moraes, em andamento.\n\
+Defesa: o senador nega irregularidades.",
+        fontes: &[
+            ("Agência Brasil, 26/10/2026", "https://agenciabrasil.ebc.com.br/politica/noticia/2026-10/moraes-manda-flavio-entregar-passaporte-e-o-proibe-de-deixar-o-pais"),
+            ("Agência Brasil, 27/10/2026", "https://agenciabrasil.ebc.com.br/politica/noticia/2026-10/policia-federal-cancela-passaportes-de-flavio-bolsonaro"),
+            ("Revista Fórum, 23/10/2026", "https://revistaforum.com.br/politica/flavio-bolsonaro-e-willer-tomaz-entenda/"),
+            ("Jornal do Brasil, 14/10/2026", "https://www.jb.com.br/brasil/policia/2026/10/1061225-pf-cita-flavio-bolsonaro-como-usuario-master-de-conta-de-empresa-de-advogado.html")] },
     Case { title: "Emendas Misteriosas", start: BSB, fixed: &[],
         brief: "Emendas parlamentares foram parar em institutos 'inexistentes de fato'. O padrinho delas também ficou inexistente de fato.",
         dossie: "EMENDAS PARLAMENTARES\n\
-Alegação: reportagens apontam emendas indicadas por Flávio que pagaram um instituto que a Receita classificou como \"inexistente de fato\" (Mesquita-RJ), um instituto ligado aos irmãos Brazão e empresas investigadas por fraude em licitação.\n\
-Status: apurações da PF, TCE-RJ e CGU. Não há acusação criminal contra ele por esses pontos.\n\
-Defesa: diz que o gabinete indica emendas mas não escolhe as empresas contratadas.\n\
-Fonte: brasildefato.com.br (03/10/2026)" },
+Alegação: reportagens apontam emendas indicadas por Flávio que pagaram R$ 666 mil a um instituto que a Receita classificou como \"inexistente de fato\" (IMP, em Mesquita-RJ), cerca de R$ 200 mil a uma ONG ligada aos irmãos Brazão (IFOP) e empresas investigadas pela PF por fraude em licitação.\n\
+Status: apurações da PF, do TCE-RJ e da CGU. Não há acusação criminal contra ele por esses pontos.\n\
+Defesa: diz que o gabinete indica emendas mas não escolhe as empresas contratadas.",
+        fontes: &[
+            ("Brasil de Fato, 01/10/2026", "https://www.brasildefato.com.br/2026/10/01/emendas-de-flavio-bolsonaro-chegaram-a-empresa-acusada-de-cartel-ong-inexistente-e-instituto-indicado-por-miliciano/"),
+            ("Brasil de Fato, 03/10/2026", "https://www.brasildefato.com.br/2026/10/03/flavio-bolsonaro-chega-ao-primeiro-turno-investigado-pela-pf-com-relacoes-com-vorcaro-expostas-e-vice-suspeito-de-estupro/")] },
     Case { title: "O Passaporte Que Não Voltou", start: BSB, fixed: &[BSB, BUE, GYE, MIA],
         brief: "O STF mandou entregar os passaportes em 24 horas. Passaram-se 24 horas. Os passaportes não. O senador também não.",
         dossie: "PASSAPORTES / SAÍDA DO PAÍS\n\
-Fatos: em 26/10/2026 Flávio foi proibido de deixar o país e intimado a entregar os passaportes em 24h. O prazo venceu sem entrega e os passaportes foram cancelados. Segundo reportagens, ele saiu pela Argentina, fez escala em Guayaquil (Equador) e seguiu para Miami. Relatos divergem sobre datas e rota. Ele tem cidadania italiana desde 2023.\n\
-Status: fatos em desenvolvimento (28/10/2026). Os dois inquéritos no STF continuam.\n\
-Fontes: agenciabrasil.ebc.com.br (27/10/2026); nexojornal.com.br (27/10/2026)" },
+Fatos: em 25/10/2026 o min. Alexandre de Moraes proibiu Flávio de deixar o país e mandou entregar os passaportes em 24h; a intimação foi em 26/10. O prazo venceu sem entrega e a PF cancelou os passaportes. Segundo reportagens, na noite de 27/10 ele cruzou para a Argentina, fez escala em Guayaquil (Equador) e chegou a Miami em 28/10. Ele tem passaporte italiano emitido em 2023.\n\
+Status: fatos em desenvolvimento (28/10/2026). Os dois inquéritos no STF continuam.",
+        fontes: &[
+            ("Agência Brasil, 26/10/2026", "https://agenciabrasil.ebc.com.br/politica/noticia/2026-10/moraes-manda-flavio-entregar-passaporte-e-o-proibe-de-deixar-o-pais"),
+            ("Gazeta do Povo, 26/10/2026 (prazo de 24h)", "https://www.gazetadopovo.com.br/republica/flavio-bolsonaro-tem-passaportes-apreendidos-e-esta-proibido-de-deixar-o-pais/"),
+            ("Agência Brasil, 27/10/2026", "https://agenciabrasil.ebc.com.br/politica/noticia/2026-10/policia-federal-cancela-passaportes-de-flavio-bolsonaro"),
+            ("Nexo, 27/10/2026", "https://www.nexojornal.com.br/expresso/2026/10/27/flavio-bolsonaro-fugiu-argentina-pf-passaporte"),
+            ("Brasil de Fato, 28/10/2026", "https://www.brasildefato.com.br/2026/10/28/flavio-bolsonaro-fugiu-pela-argentina-na-noite-de-terca-27-e-fez-escala-no-equador-antes-de-seguir-para-os-eua/")] },
 ];
 
 const WITNESSES: [&str; 8] = [
@@ -481,6 +509,11 @@ impl Game {
         }
     }
 
+    // botão à parte no JS: volta ao menu sem contar vitória nem derrota
+    pub fn abandon(&mut self) {
+        if matches!(self.screen, Screen::Brief | Screen::City | Screen::Travel) { self.screen = Screen::Title; }
+    }
+
     fn header(&self) -> String {
         format!("{}👮 {}   📍 {}   ⏳ {}h   📎 Provas: {}   ⚖️ Mandado: {}\n\n", if self.hard { "⛪ " } else { "" }, self.posto().abbr,
             CITIES[self.here].name, self.hours, self.provas, if self.mandado { "sim" } else { "não" })
@@ -538,6 +571,12 @@ Interrogar: {}h · Viajar: 1h a 15h, pela distância · Mandado: {}h, com {} pro
             Screen::Travel => format!("{}Para onde?", self.header()),
             Screen::End => format!("CASO: {}\n\n{}", CASES[self.case].title, self.end),
         };
+        // linhas "~ " = fontes do dossiê (veículo|URL); o JS vira links
+        if let Screen::Dossie(i) = self.screen {
+            for (label, url) in CASES[i].fontes {
+                s += &format!("\n~ {}|{}", label, url);
+            }
+        }
         // linha "# " = texto de compartilhar; o JS tira do corpo e põe num botão
         if self.screen == Screen::End {
             s += "\n# ";
@@ -571,6 +610,12 @@ pub extern "C" fn start(seed: u32, solved: u32) {
 #[no_mangle]
 pub extern "C" fn act(i: u32) {
     GAME.with(|g| g.borrow_mut().act(i as usize));
+    publish();
+}
+
+#[no_mangle]
+pub extern "C" fn abandon() {
+    GAME.with(|g| g.borrow_mut().abandon());
     publish();
 }
 
@@ -715,6 +760,42 @@ mod tests {
         // voos 4h + 6h + 4h, 4 cidades x 3 interrogatórios x 2h, mandado 3h, folga do Estagiário 40h
         assert_eq!(g.deadline(), 14 + 24 + 3 + 40);
         assert_eq!(g.hours, g.deadline());
+    }
+
+    #[test]
+    fn abandon_returns_to_menu_without_changing_career() {
+        let mut g = begin_at(1, 0, 3);
+        g.abandon();
+        assert_eq!(g.screen, Screen::Title);
+        assert_eq!(g.solved, 3);
+        assert!(g.render().contains("3 casos resolvidos"));
+        // na abertura e na viagem também; no fim de caso não faz nada
+        let mut g = Game::new(1, 0);
+        g.act(0);
+        g.abandon();
+        assert_eq!(g.screen, Screen::Title);
+        let mut g = begin(1);
+        g.act(3);
+        g.abandon();
+        assert_eq!(g.screen, Screen::Title);
+        g.screen = Screen::End;
+        g.abandon();
+        assert_eq!(g.screen, Screen::End);
+    }
+
+    #[test]
+    fn every_dossier_links_its_sources() {
+        for c in CASES {
+            assert!(!c.fontes.is_empty(), "{}", c.title);
+            assert!(c.fontes.iter().all(|(l, u)| u.starts_with("https://") && !l.contains('|')), "{}", c.title);
+            assert!(!c.dossie.contains("Fonte"), "{}", c.title);
+        }
+        let mut g = Game::new(1, 0);
+        g.act(2);
+        g.act(7);
+        let links: Vec<_> = g.render().lines().filter(|l| l.starts_with("~ ")).map(String::from).collect();
+        assert_eq!(links.len(), CASES[7].fontes.len());
+        assert!(links[0].starts_with("~ Agência Brasil, 26/10/2026|https://agenciabrasil.ebc.com.br/"));
     }
 
     #[test]
