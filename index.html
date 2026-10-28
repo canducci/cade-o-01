@@ -83,13 +83,27 @@ const IGUANA = ['.....GGk', 'GGGGGGG.', '.g..g...'];
 const JET = ['ww...........', 'www..........', 'wwwwwwwwwwww.', 'wCwCwCwCwwwwC', '.wwwwwwwwwww.', '.....ww......', '....ww.......'];
 const BUBBLE = ['.wwwww.', 'wkwkwkw', '.wwwww.', '..w....', '.w.....'];
 
-// personagens 8x13
-const PERSON = ['..HHHH..', '.HHHHHH.', '..pppp..', '..kppk..', '..pppp..', '.SSSSSS.', 'SSSSSSSS', 'pSSSSSSp', 'pSSSSSSp', '.LLLLLL.', '.LL..LL.', '.LL..LL.', '.kk..kk.'];
-// cabeças alternativas (2 primeiras linhas)
-const TOP = { hat: ['..HHHH..', 'HHHHHHHH'], cap: ['..HHHH..', '..HHHHHH'], chef: ['.HHHHHH.', '..HHHH..'], bald: ['........', '..pppp..'],
-  ears: ['HH....HH', '.HHHHHH.'], plume: ['...HH...', '.HHHHHH.'] };
-const person = (h, s, l, skin = 'p', top) => [...(TOP[top] || PERSON.slice(0, 2)), ...PERSON.slice(2)]
-  .map(r => r.replace(/H/g, h).replace(/S/g, s).replace(/L/g, l).replace(/p/g, skin));
+// personagens 16x26 em pixel de 1 unidade (mesmo tamanho na tela dos antigos 8x13 em pixel 2)
+// H cabelo/chapéu, S camisa, L calça, p pele; minúsculas s/l = sombra do lado direito
+const PERSON = ['....HHHHHHHH....', '...HHHHHHHHHH...', '..HHHHHHHHHHHH..', '..HHpppppppppH..', '..Hppppppppppp..',
+  '..ppwkppppwkpp..', '..pppppppppppp..', '...pppppppppp...', '...pppprrpppp...', '....pppppppp....', '.....pppppp.....', '......pppp......',
+  '..SSSSSwwSSSSS..', '.SSSSSSSSSSSSss.', 'SSSSSSSSSSSSSsss', 'SS.SSSSSSSSSs.ss', 'SS.SSSSSSSSSs.ss', 'pp.SSSSSSSSSs.pp',
+  'pp.kkkkyykkkk.pp', '...LLLLLLLLLl...', '...LLLL..LLLl...', '...LLLL..LLLl...', '...LLLL..LLLl...', '...LLLL..LLLl...',
+  '...kkkk..kkkk...', '..kkkkk..kkkkk..'];
+// cabeças alternativas (5 primeiras linhas)
+const TOP = {
+  hat: ['....HHHHHHHH....', '....HHHHHHHH....', '....kkkkkkkk....', 'HHHHHHHHHHHHHHHH', '..pppppppppppp..'],
+  cap: ['....HHHHHHH.....', '...HHHHHHHHH....', '...HHHHHHHHHHHHH', '..pppppppppppp..', '..pppppppppppp..'],
+  chef: ['...HHHHHHHHHH...', '..HHHHHHHHHHHH..', '...HHHHHHHHHH...', '...aaaaaaaaaa...', '..pppppppppppp..'],
+  bald: ['................', '....pppppppp....', '...pppppppppp...', '..HppppppppppH..', '..HppppppppppH..'],
+  ears: ['HHH..........HHH', 'HHHH........HHHH', '..HHHHHHHHHHHH..', '..HHHHHHHHHHHH..', '..pppppppppppp..'],
+  plume: ['..HHHHHHHHHHH...', '...HHHHHHHHHHH..', '...aaaaaaaaaa...', '..aaaaaaaaaaaa..', '..appppppppppa..'],
+};
+const DARK = { w: 'a', a: 'd', d: 'k', k: 'k', y: 'n', C: 'c', G: 'g', R: 'r', M: 'm', B: 'b', b: 'k', n: 'r', r: 'k', g: 'k', c: 'b', m: 'k' };
+const person = (h, s, l, skin = 'p', top) => [...(TOP[top] || PERSON.slice(0, 5)), ...PERSON.slice(5)]
+  .map(r => r.replace(/H/g, h).replace(/s/g, DARK[s]).replace(/S/g, s).replace(/l/g, DARK[l]).replace(/L/g, l).replace(/p/g, skin));
+// troca trechos de linhas: {linha: [coluna, texto]}
+const patch = (rows, ps) => rows.map((r, j) => (ps[j] || []).reduce((r, [c, t]) => r.slice(0, c) + t + r.slice(c + t.length), r));
 // mesma ordem de WITNESSES em src/lib.rs
 const WITNESS = [person('y', 'w', 'd'), person('k', 'w', 'k'), person('n', 'd', 'd', 'n'), person('n', 'M', 'b'),
   person('k', 'a', 'd', 'n'), person('M', 'C', 'b'), person('b', 'w', 'b'), person('a', 'G', 'n', 'n'),
@@ -121,8 +135,11 @@ const ACC = ['taxi', 'tray', 'folder', 'choc', 'sign', 'phone', 'roll', 'bino',
   'case', 'radio', 'corn', 'money', 'pastel', 'box', 'tank', 'folder', 'board', 'rose', 'spit', 'bills',
   'hats', 'flag', 'clip', 'buoy', 'cup', 'bags', 'balloon', 'ticket', 'shop', 'case', 'radio', 'papers',
   'flag', 'pita', 'staff', 'passport', 'shield', 'spear', 'bell', 'guitar', 'nata', 'calc', 'staff', 'wine'];
-const FLAVIO = ['..yyyy..', '.yyyyyGG', '..pppp..', '..kkkk..', '..pppp..', '.dwwwwd.', 'dddggddd', 'pddggddp', 'pddddddp', '.dddddd.', '.dd..dd.', '.dd..dd.', '.kk..kk.'];
-const AGENT = ['..bbbb..', '.bbbbbb.', '..pppp..', '..kppk..', '..pppp..', '.bbbbbb.', 'bbyyyybb', 'pbbbbbbp', 'pbbbbbbp', '.kkkkkk.', '.kk..kk.', '.kk..kk.', '.nn..nn.'];
+// 01: boné verde-amarelo, óculos escuros, terno escuro e gravata verde
+const FLAVIO = patch(person('y', 'd', 'd', 'p', 'cap'), { 2: [[12, 'GGGG']], 5: [[3, 'kkkkkkkkkk']], 12: [[6, 'wggw']],
+  13: [[7, 'gg']], 14: [[7, 'gg']], 15: [[7, 'gg']], 16: [[7, 'gg']] });
+// agente: boné e farda azuis com faixa amarela, coturno marrom
+const AGENT = patch(person('b', 'b', 'k', 'p', 'cap'), { 2: [[12, 'kkkk']], 14: [[3, 'yyyyyyyyyy']], 24: [[3, 'nnnn'], [9, 'nnnn']], 25: [[2, 'nnnnn'], [9, 'nnnnn']] });
 const FEET = 88;
 
 // --- alta resolução: pixel de 1 unidade, ainda nas 16 cores; meio-tom por pontilhado xadrez ---
@@ -332,16 +349,16 @@ const CITY = [
 
 // testemunhas na frente da cena; quem acabou de falar ganha balão e boca mexendo
 // contorno de meio pixel: silhueta preta deslocada nas 4 direções
-const outlined = (rows, x, y) => {
+const outlined = (rows, x, y, s = 2) => {
   const sil = rows.map(r => r.replace(/[^.]/g, 'k'));
-  return [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => spr(sil, x + dx, y + dy)).join('') + spr(rows, x, y);
+  return [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => spr(sil, x + dx, y + dy, '', s)).join('') + spr(rows, x, y, '', s);
 };
 const BUBBLE_L = BUBBLE.map(r => [...r].reverse().join(''));
 // nas laterais, para não tapar o ponto turístico do centro
 const WX = [2, 26, 140];
 const witnesses = (ws, talk) => ws.map((w, i) => {
   const x = WX[i], right = x > 100;
-  return outlined(WITNESS[w], x, FEET - 26) + outlined(PROP[ACC[w]], right ? x + 2 - PROP[ACC[w]][0].length * 2 : x + 14, FEET - 12) + (talk === i + 1 ?
+  return outlined(WITNESS[w], x, FEET - 26, 1) + outlined(PROP[ACC[w]], right ? x + 2 - PROP[ACC[w]][0].length * 2 : x + 14, FEET - 12) + (talk === i + 1 ?
     anim('bob', outlined(right ? BUBBLE_L : BUBBLE, right ? x - 14 : x + 14, 52)) + anim('blink', R(x + 6, FEET - 18, 4, 2, K.red)) : '');
 }).join('');
 
@@ -396,7 +413,7 @@ function draw(kind, a) {
   if (kind === 'title') {
     art.innerHTML = map() + CITY_LL.map((_, c) => dot(c, K.yel)).join('') + `<g id="plane">${PLANE}</g>` +
       R(14, 30, 132, 22, K.blk, 'opacity=".7"') + T(80, 47, 15, K.yel, 'CADÊ O 01?', 'text-anchor="middle" font-weight="bold"') +
-      anim('bob', at(FLAVIO, 140, FEET)) + anim('bob', at(AGENT, 4, FEET));
+      anim('bob', at(FLAVIO, 140, FEET, '', 1)) + anim('bob', at(AGENT, 4, FEET, '', 1));
     titleLoop();
   } else if (kind === 'dossie' || kind === 'lose' && a[2]) {
     // dossiê com carimbo; no arquivamento o carimbo é ARQUIVADO e o 01 foge ao fundo
@@ -406,12 +423,12 @@ function draw(kind, a) {
       `<g transform="rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, stamp, 'text-anchor="middle" font-weight="bold"')}</g>` +
       (kind === 'lose' ? anim('away', spr(JET, 4, 70)) : '');
   } else if (kind === 'brief') {
-    art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET);
+    art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET, '', 1);
   } else if (kind === 'city') {
     // a = [cidade, w0, w1, w2, fala, no_rastro, horas, prazo]
     const left = a[6] / a[7], bar = left > .5 ? K.lgn : left > .25 ? K.yel : K.lrd;
     art.innerHTML = CITY[a[0]]() +
-      (a[5] && !a[4] ? anim('run', at(FLAVIO.map(r => r.replace(/[^.]/g, 'k')), 0, 70, 'opacity=".8"')) : '') +
+      (a[5] && !a[4] ? anim('run', at(FLAVIO.map(r => r.replace(/[^.]/g, 'k')), 0, 70, 'opacity=".8"', 1)) : '') +
       witnesses(a.slice(1, 4), a[4]) + R(2, 2, 52, 5, K.blk, `stroke="${K.gry}" stroke-width=".5"`) + R(3, 3, 50 * left, 3, bar, left <= .25 ? 'class="blink"' : '');
   } else if (kind === 'travel') {
     art.innerHTML = map() + C(...xy(a[0]), 3, 'none', `stroke="${K.lrd}" stroke-width=".6" class="blink"`) + dot(a[0], K.lrd) + T(xy(a[0])[0] + 4, xy(a[0])[1] + 1.5, 4, K.lrd, 'você') + a.slice(1).map((c, i) => dot(c, K.yel, `${i + 1}.${CITY_NAME[c]}`)).join('');
@@ -419,9 +436,9 @@ function draw(kind, a) {
     art.innerHTML = CITY[a[0]]() + R(0, 0, 160, 90, K.blk, 'opacity=".35"') +
       `<g class="blink">${R(0, 0, 80, 6, K.red)}${R(80, 0, 80, 6, K.lbl)}</g><g class="blink2">${R(0, 0, 80, 6, K.lbl)}${R(80, 0, 80, 6, K.red)}</g>` +
       R(40, 10, 80, 18, K.blk) + T(80, 23, 11, K.lgn, 'PEGO!', 'text-anchor="middle" font-weight="bold"') +
-      at(AGENT, 60, FEET) + at(FLAVIO, 84, FEET) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
+      at(AGENT, 60, FEET, '', 1) + at(FLAVIO, 84, FEET, '', 1) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
   } else if (kind === 'lose') {
-    art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET) + anim('away', spr(JET, 70, 40)) +
+    art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET, '', 1) + anim('away', spr(JET, 70, 40)) +
       T(80, 12, 7, K.wht, 'tchau, querido...', 'text-anchor="middle" stroke="#000" stroke-width=".8" paint-order="stroke"');
   }
 }
