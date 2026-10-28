@@ -309,6 +309,39 @@ const PROVAS: [&str; 6] = [
     "um print de WhatsApp", "um comprovante de depósito em espécie", "uma nota fiscal esquisita",
     "um recibo de bombons", "um áudio vazado", "uma planilha misteriosa",
 ];
+// fala de fim (vai pro balão), inspirada em declarações públicas, uma lista por resultado
+const END_WIN: [&str; 6] = [
+    "01: Isso é justiça? Prender senador por causa disso? Vou recorrer até o fim!",
+    "Pai do 01: Mexeram com meu filho só pra me atingir. Já vi esse filme.",
+    "03: Decisão arbitrária e sem efeito prático. Vou denunciar isso lá fora!",
+    "Defesa: Isso é uma santa inquisição, toda baseada em premissas falsas!",
+    "Aliado no Senado: É um Torquemada moderno! Usa o inquérito para intimidar.",
+    "01: Moraes, faça um bem pra nação e renuncie. E devolve meu passaporte.",
+];
+const END_ESCAPE: [&str; 6] = [
+    "01: Tchau, querido! Sem mandado, isso aqui é só um passeio de jatinho.",
+    "03: Eu avisei: se apertar, sai do país. Aqui nos EUA sempre cabe mais um.",
+    "01: Sair do país nunca foi opção. Isso aqui é só uma escala técnica.",
+    "Pai do 01: Ninguém aqui foge. Ele só viajou mais rápido que o oficial de justiça.",
+    "Defesa: Sem mandado não há caso. E o caso, como sempre dissemos, está enterrado.",
+    "Aliado no Senado: Recebo com tranquilidade. Quem tem que explicar é o agente sem mandado.",
+];
+const END_TIME: [&str; 6] = [
+    "01: Nunca respondi criminalmente por isso. Toda essa espuma já baixou.",
+    "Pai do 01: Eu sempre disse: se errou e for provado, paga. Provar, ninguém provou.",
+    "Defesa: Nulidades reconhecidas, prazo vencido. A defesa sempre confiou na Justiça.",
+    "03: Sempre disse que era perseguição. Agora até o relógio concorda comigo.",
+    "Aliado no Senado: Eu tinha certeza: a investigação mostraria que não há ato ilícito nenhum.",
+    "01: Pode revirar do avesso. Ou, mais prático, deixar quietinho na gaveta.",
+];
+const END_ARCHIVE: [&str; 6] = [
+    "01: Conhecereis a verdade, e a verdade vos libertará. Glória a Deus!",
+    "01: Anos de perseguição, vazamentos e covardias, e nada contra mim. Justiça feita!",
+    "Defesa: Como a defesa sempre disse: o caso está enterrado. Descanse em paz.",
+    "Pai do 01: Sempre acreditei na inocência do meu filho. Usaram ele pra me atingir.",
+    "03: Acabou a perseguição contra meu irmão! Agora só falta a do resto da família.",
+    "Aliado no Senado: Recebi o arquivamento com a mesma tranquilidade com que recebi o inquérito.",
+];
 
 // carreira: casos resolvidos para chegar ao posto e folga sobre a rota sem erro
 struct Posto { need: u32, name: &'static str, abbr: &'static str, slack: i32 }
@@ -420,7 +453,10 @@ impl Game {
     }
 
     fn finish(&mut self, text: String) {
-        self.end = text;
+        let pool = if text.contains("🏆") { END_WIN } else if text.contains("ARQUIVADO") { END_ARCHIVE }
+            else if text.contains("⏰") { END_TIME } else { END_ESCAPE };
+        let (who, line) = pool[self.rand(pool.len())].split_once(": ").unwrap();
+        self.end = format!("{}\n\" {}: \"{}\"", text, who, line);
         self.screen = Screen::End;
     }
 
@@ -444,7 +480,7 @@ impl Game {
                 self.solved = self.solved.saturating_add(if self.hard { 2 } else { 1 });
                 let now = rank(self.solved);
                 let promo = if now > before { format!("\n\n⭐ Promovido a {}!", RANKS[now].name) } else { String::new() };
-                self.finish(format!("🚔 {} aponta uma esquina de {}. Lá está ele, de boné e óculos escuros.\nVocê mostra o mandado do STF.\n\"Isso é perseguição!\", declara o 01, antes de pedir pra falar com o advogado.\n\n🏆 CASO ENCERRADO (por enquanto — ainda cabe recurso).{}", who, city, promo));
+                self.finish(format!("🚔 {} aponta uma esquina de {}. Lá está ele, de boné e óculos escuros.\nVocê mostra o mandado do STF, e ele pede pra falar com o advogado.\n\n🏆 CASO ENCERRADO (por enquanto — ainda cabe recurso).{}", who, city, promo));
             } else {
                 self.finish(format!("🛩️ {} aponta uma esquina de {}. Lá está ele!\nMas você não tem mandado. Ele acena, sorri e embarca num jatinho.\n\n❌ Sem mandado, sem prisão. Junte provas e peça ao STF antes do confronto.", who, city));
             }
@@ -600,7 +636,7 @@ impl Game {
     // Texto para o jogador copiar no fim do caso, com o link do jogo.
     fn share(&self) -> String {
         let city = CITIES[self.here].name;
-        let line = if self.end.contains("🏆") { format!("🚔 Peguei o 01 em {} com {}h de sobra", city, self.hours) }
+        let line = if self.end.contains("🏆") { format!("🚔 Peguei o 01 em {} com mandado do STF e {}h de sobra", city, self.hours) }
             else if self.end.contains("ARQUIVADO") { format!("📁 O relator arquivou meu caso em {}", city) }
             else if self.end.contains("⏰") { format!("⏰ O prazo acabou e o 01 sumiu perto de {}", city) }
             else { format!("🛩️ Achei o 01 em {}, mas sem mandado ele embarcou num jatinho", city) };
@@ -613,9 +649,9 @@ impl Game {
             Screen::Title => "@title".into(),
             Screen::DossieList | Screen::Dossie(_) => "@dossie".into(),
             Screen::Brief => format!("@brief {}", self.here),
-            // @city cidade w0 w1 w2 quem_fala no_rastro horas prazo
-            Screen::City => format!("@city {} {} {} {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
-                self.last_ask.map_or(0, |s| s + 1), self.on_trail() as u8, self.hours.max(0), self.deadline()),
+            // @city cidade w0 w1 w2 quem_fala no_rastro horas prazo mandado
+            Screen::City => format!("@city {} {} {} {} {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
+                self.last_ask.map_or(0, |s| s + 1), self.on_trail() as u8, self.hours.max(0), self.deadline(), self.mandado as u8),
             Screen::Travel => format!("@travel {} {}", self.here, self.dests.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" ")),
             // @win/@lose cidade casos_resolvidos arquivado (o JS salva o total)
             Screen::End => format!("@{} {} {} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here, self.solved,
@@ -917,5 +953,22 @@ mod tests {
             }
         }
         assert_eq!(seen, [true; 3]);
+    }
+
+    #[test]
+    fn end_speech_matches_result() {
+        let ends = (1..200).flat_map(|s| [play_perfect(s, 0), play_perfect(s, 1)]).collect::<Vec<_>>();
+        let pool = |t: &str| if t.contains("🏆") { END_WIN } else if t.contains("ARQUIVADO") { END_ARCHIVE }
+            else if t.contains("⏰") { END_TIME } else { END_ESCAPE };
+        for t in &ends {
+            let speech = t.lines().find(|l| l.starts_with("\" ")).expect("fala no fim");
+            let (who, line) = speech[2..].split_once(": \"").unwrap();
+            assert!(pool(t).contains(&format!("{}: {}", who, line.trim_end_matches('"')).as_str()), "{}", speech);
+        }
+        let mut g = begin(5);
+        g.provas = 9;
+        assert!(g.render().lines().next().unwrap().ends_with(" 0"));
+        while !g.mandado { g.warrant(); }
+        assert!(g.render().lines().next().unwrap().ends_with(" 1"));
     }
 }

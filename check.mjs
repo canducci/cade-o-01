@@ -10,7 +10,8 @@ const s = read();
 if (!/⏳ \d+h/.test(s) || !s.includes('> Viajar')) throw new Error(s);
 w.act(0);
 // interrogar custa 2h: horas = prazo - 2
-const m = read().match(/^@city \d+ \d+ \d+ \d+ 1 1 (\d+) (\d+)\n/);
+// ... e o último número diz se há mandado (selo na cena)
+const m = read().match(/^@city \d+ \d+ \d+ \d+ 1 1 (\d+) (\d+) 0\n/);
 if (!m || +m[1] !== m[2] - 2) throw new Error('linha de cena: ' + read().split('\n')[0]);
 // a fala da testemunha vem numa linha própria, que o JS põe no balão
 if (!/\n" .+: "/.test(read())) throw new Error('fala: ' + read());
@@ -20,4 +21,6 @@ w.start(42, 7);
 w.act(0); w.act(0);
 while (!/^@(win|lose) /.test(read())) w.act(0);
 if (!/^@lose \d+ 7 0\n/.test(read())) throw new Error('cena de fim: ' + read().split('\n')[0]);
+// fala de fim vai pro balão
+if (!/\n" .+: ".+"/.test(read())) throw new Error('fala de fim: ' + read());
 console.log('ok');
