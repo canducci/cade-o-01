@@ -9,7 +9,7 @@
   #art { display: block; box-sizing: border-box; width: 100%; aspect-ratio: 16 / 9; border: 4px solid #aaaaaa; border-bottom: 0; background: #0000aa; shape-rendering: crispEdges; }
   #text { white-space: pre-wrap; border: 4px solid #aaaaaa; padding: 1em; background: #0000aa; min-height: 6em; cursor: pointer; }
   #opts { display: grid; grid-template-columns: 1fr 1fr; gap: .4em; margin-top: .4em; }
-  @media (max-width: 600px) { #opts { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { body { font-size: 16px; } #opts { grid-template-columns: 1fr; } }
   #opts button { display: block; width: 100%; padding: .4em .5em; text-align: left; font: inherit; font-size: 15px; color: #000; background: #55ffff; border: 0; cursor: pointer; }
   #opts button:hover, #opts button:focus { background: #fff; }
   #opts button:disabled { opacity: .4; }
@@ -266,10 +266,13 @@ function draw(kind, a) {
       R(14, 30, 132, 22, K.blk, 'opacity=".7"') + T(80, 47, 15, K.yel, 'CADÊ O 01?', 'text-anchor="middle" font-weight="bold"') +
       anim('bob', at(FLAVIO, 140, FEET)) + anim('bob', at(AGENT, 4, FEET));
     titleLoop();
-  } else if (kind === 'dossie') {
+  } else if (kind === 'dossie' || kind === 'lose' && a[2]) {
+    // dossiê com carimbo; no arquivamento o carimbo é ARQUIVADO e o 01 foge ao fundo
+    const stamp = kind === 'dossie' ? 'CONFIDENCIAL' : 'ARQUIVADO';
     art.innerHTML = R(0, 0, 160, 90, K.dgr) + R(30, 12, 40, 8, K.brn) + R(30, 18, 100, 64, K.brn) + R(34, 22, 92, 56, K.yel) +
       [30, 36, 42, 48, 54, 60, 66].map(y => R(40, y, 70 - (y % 12) * 2, 2, K.dgr)).join('') +
-      `<g transform="rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, 'CONFIDENCIAL', 'text-anchor="middle" font-weight="bold"')}</g>`;
+      `<g transform="rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, stamp, 'text-anchor="middle" font-weight="bold"')}</g>` +
+      (kind === 'lose' ? anim('away', spr(JET, 4, 70)) : '');
   } else if (kind === 'brief') {
     art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET);
   } else if (kind === 'city') {
@@ -323,10 +326,11 @@ const dec = new TextDecoder('utf-8');
 const text = document.getElementById('text'), opts = document.getElementById('opts');
 let scene0 = '', city0 = -1, busy = false, typing = 0;
 
-function type(s) {
+// bipe de digitação só quando uma testemunha fala
+function type(s, talk) {
   clearInterval(typing);
   let n = 0;
-  typing = setInterval(() => { n += 3; if (n % 12 === 0 && s[n] > ' ') beep(1200 + n % 5 * 60, 6); text.textContent = s.slice(0, n); if (n >= s.length) clearInterval(typing); }, 12);
+  typing = setInterval(() => { n += 3; if (talk && n % 12 === 0 && s[n] > ' ') beep(1200 + n % 5 * 60, 6); text.textContent = s.slice(0, n); if (n >= s.length) clearInterval(typing); }, 12);
   text.onclick = () => { clearInterval(typing); text.textContent = s; };
 }
 
@@ -351,7 +355,7 @@ function show() {
     busy = false;
     opts.replaceChildren(...buttons);
     draw(kind, a);
-    type(body);
+    type(body, kind === 'city' && a[4]);
     if (kind === 'win') siren();
     if (kind === 'win' || kind === 'lose') try { localStorage.solved = a[1]; } catch {}
     if (kind === 'lose') beep(440, 900, 110);

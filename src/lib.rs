@@ -474,8 +474,9 @@ impl Game {
             Screen::City => format!("@city {} {} {} {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
                 self.last_ask.map_or(0, |s| s + 1), self.on_trail() as u8, self.hours.max(0), self.deadline()),
             Screen::Travel => format!("@travel {} {}", self.here, self.dests.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" ")),
-            // @win/@lose cidade casos_resolvidos (o JS salva o total)
-            Screen::End => format!("@{} {} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here, self.solved),
+            // @win/@lose cidade casos_resolvidos arquivado (o JS salva o total)
+            Screen::End => format!("@{} {} {} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here, self.solved,
+                self.end.contains("ARQUIVADO") as u8),
         }
     }
 
@@ -491,10 +492,9 @@ Você é agente da Divisão de Fugas Improváveis. Siga as pistas, junte provas,
             Screen::DossieList => "DOSSIÊS\nO que dizem as investigações e reportagens (status em 28/10/2026).".into(),
             Screen::Dossie(i) => CASES[i].dossie.into(),
             Screen::Brief => format!("CASO: {}\n\n{}\n\nPonto de partida: {}. Posto: {}. Você tem {}h.\n\
-Interrogar: {}h · Viajar: {}h · Mandado: {}h (precisa de {} provas; algumas podem ser anuladas).\n\
-O mandado tem que estar na mão antes de alcançar o 01.{}",
+Interrogar: {}h · Viajar: {}h · Mandado: {}h, com {} provas, antes de alcançar o 01.{}",
                 CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, self.posto().name, self.hours, H_ASK, H_TRAVEL, H_WARRANT, NEED,
-                if self.hard { format!("\n\n⛪ Modo Relator Terrivelmente Evangélico: cada viagem tem 1 em {} de chance de o caso ser arquivado, e metade das provas tende a ser anulada.", ARCHIVE_ODDS) } else { String::new() }),
+                if self.hard { format!("\n\n⛪ Modo difícil: 1 em {} viagens arquiva o caso, e metade das provas tende a ser anulada.", ARCHIVE_ODDS) } else { " Algumas provas podem ser anuladas.".into() }),
             Screen::City => format!("{}{}\n\n{}", self.header(), CITIES[self.here].desc, self.msg),
             Screen::Travel => format!("{}Para onde?", self.header()),
             Screen::End => format!("CASO: {}\n\n{}", CASES[self.case].title, self.end),
@@ -620,6 +620,8 @@ mod tests {
         let wins = |e: &[String]| e.iter().filter(|t| t.contains("CASO ENCERRADO")).count();
         assert!(hard.iter().any(|t| t.contains("ARQUIVADO")));
         assert!(!normal.iter().any(|t| t.contains("ARQUIVADO")));
+        // a cena de fim marca o arquivamento para o JS desenhar o carimbo
+        assert!(hard.iter().all(|t| t.contains("ARQUIVADO") == t.lines().next().unwrap().ends_with(" 1")));
         assert!(wins(&hard) > 0 && wins(&hard) < wins(&normal), "hard={} normal={}", wins(&hard), wins(&normal));
     }
 
