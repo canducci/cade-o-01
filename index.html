@@ -372,7 +372,7 @@ function show() {
 addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); const n = +e.key; if (n >= 1 && n <= opts.children.length) choose(n - 1); });
 // carreira: total de casos resolvidos; valor ausente ou inválido vale 0
 let solved = 0;
-try { const v = Number(localStorage.solved ?? 0); if (Number.isSafeInteger(v) && v >= 0) solved = v; } catch {}
+try { const v = Number(localStorage.solved ?? 0); if (Number.isInteger(v) && v >= 0 && v <= 0xFFFFFFFF) solved = v; } catch {}
 w.start(Date.now() >>> 0, solved);
 show();
 </script>
