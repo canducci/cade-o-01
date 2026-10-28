@@ -93,6 +93,8 @@ const anim = (cls, s) => `<g class="${cls}">${s}</g>`; // animação CSS fora do
 
 const CLOUD = ['..www....', '.wwwwww..', 'wwwwwwwww'];
 const IGUANA = ['.....GGk', 'GGGGGGG.', '.g..g...'];
+// mandado: papel com selo vermelho do STF
+const WARRANT = ['wwwwwwww', 'wkkkkkkw', 'wwwwwwww', 'wkkkkkww', 'wwwwwwww', 'wkkkwRRw', 'wwwwwRRw', 'wwwwwwww'];
 const JET = ['ww...........', 'www..........', 'wwwwwwwwwwww.', 'wCwCwCwCwwwwC', '.wwwwwwwwwww.', '.....ww......', '....ww.......'];
 
 // personagens 16x26 em pixel de 1 unidade (mesmo tamanho na tela dos antigos 8x13 em pixel 2)
@@ -430,7 +432,8 @@ function draw(kind, a) {
     const stamp = kind === 'dossie' ? 'CONFIDENCIAL' : 'ARQUIVADO';
     art.innerHTML = R(0, 0, 160, 90, K.dgr) + R(30, 12, 40, 8, K.brn) + R(30, 18, 100, 64, K.brn) + R(34, 22, 92, 56, K.yel) +
       [30, 36, 42, 48, 54, 60, 66].map(y => R(40, y, 70 - (y % 12) * 2, 2, K.dgr)).join('') +
-      `<g transform="rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, stamp, 'text-anchor="middle" font-weight="bold"')}</g>` +
+      // no arquivamento o carimbo desce para o balão da fala não cobrir
+      `<g transform="translate(0 ${kind === 'lose' ? 18 : 0}) rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, stamp, 'text-anchor="middle" font-weight="bold"')}</g>` +
       (kind === 'lose' ? anim('away', spr(JET, 4, 70)) : '');
   } else if (kind === 'brief') {
     art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET, '', 1);
@@ -439,17 +442,20 @@ function draw(kind, a) {
     const left = a[6] / a[7], bar = left > .5 ? K.lgn : left > .25 ? K.yel : K.lrd;
     art.innerHTML = CITY[a[0]]() +
       (a[5] && !a[4] ? anim('run', at(FLAVIO.map(r => r.replace(/[^.]/g, 'k')), 0, 70, 'opacity=".8"', 1)) : '') +
-      witnesses(a.slice(1, 4), a[4]) + R(2, 2, 52, 5, K.blk, `stroke="${K.gry}" stroke-width=".5"`) + R(3, 3, 50 * left, 3, bar, left <= .25 ? 'class="blink"' : '');
+      witnesses(a.slice(1, 4), a[4]) + R(2, 2, 52, 5, K.blk, `stroke="${K.gry}" stroke-width=".5"`) + R(3, 3, 50 * left, 3, bar, left <= .25 ? 'class="blink"' : '') +
+      // selo enquanto o mandado vale; some sozinho se cair num habeas corpus
+      (a[8] ? R(57, 1, 44, 9, K.yel, `stroke="${K.blk}" stroke-width=".8"`) + T(79, 8.4, 9, K.blk, '⚖ MANDADO', 'text-anchor="middle" font-weight="bold"') : '');
   } else if (kind === 'travel') {
     art.innerHTML = map() + C(...xy(a[0]), 3, 'none', `stroke="${K.lrd}" stroke-width=".6" class="blink"`) + dot(a[0], K.lrd) + T(xy(a[0])[0] + 4, xy(a[0])[1] + 1.5, 4, K.lrd, 'você') + a.slice(1).map((c, i) => dot(c, K.yel, `${i + 1}.${CITY_NAME[c]}`)).join('');
   } else if (kind === 'win') {
     art.innerHTML = CITY[a[0]]() + R(0, 0, 160, 90, K.blk, 'opacity=".35"') +
       `<g class="blink">${R(0, 0, 80, 6, K.red)}${R(80, 0, 80, 6, K.lbl)}</g><g class="blink2">${R(0, 0, 80, 6, K.lbl)}${R(80, 0, 80, 6, K.red)}</g>` +
       R(40, 10, 80, 18, K.blk) + T(80, 23, 11, K.lgn, 'PEGO!', 'text-anchor="middle" font-weight="bold"') +
-      at(AGENT, 60, FEET, '', 1) + at(FLAVIO, 84, FEET, '', 1) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
+      // faixa embaixo, fora do caminho do balão
+      R(104, 79, 54, 9, K.yel, `stroke="${K.blk}" stroke-width=".8"`) + T(131, 86, 7, K.blk, '⚖ MANDADO DO STF', 'text-anchor="middle" font-weight="bold"') +
+      at(AGENT, 60, FEET, '', 1) + spr(WARRANT, 52, FEET - 16, '', 1) + at(FLAVIO, 84, FEET, '', 1) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
   } else if (kind === 'lose') {
-    art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET, '', 1) + anim('away', spr(JET, 70, 40)) +
-      T(80, 12, 7, K.wht, 'tchau, querido...', 'text-anchor="middle" stroke="#000" stroke-width=".8" paint-order="stroke"');
+    art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET, '', 1) + anim('away', spr(JET, 70, 40));
   }
 }
 
@@ -486,9 +492,9 @@ function describe(kind, a) {
   return kind === 'title' ? 'Mapa-múndi com as cidades do jogo; o agente e o 01 nos cantos.'
     : kind === 'dossie' ? 'Pasta de dossiê com carimbo CONFIDENCIAL.'
     : kind === 'brief' ? `Cartão-postal de ${c}, com o agente no centro.`
-    : kind === 'city' ? `Cartão-postal de ${c}, com três testemunhas${a[4] ? '; uma delas está falando' : ''}${a[5] && !a[4] ? '; uma silhueta passa correndo ao fundo' : ''}.`
+    : kind === 'city' ? `Cartão-postal de ${c}, com três testemunhas${a[4] ? '; uma delas está falando' : ''}${a[5] && !a[4] ? '; uma silhueta passa correndo ao fundo' : ''}${a[8] ? '; selo: mandado em mãos' : ''}.`
     : kind === 'travel' ? `Mapa com a sua posição em ${c} e os destinos numerados: ${a.slice(1).map(d => CITY_NAME[d]).join(', ')}.`
-    : kind === 'win' ? `Em ${c}, o agente algema o 01 sob luzes de sirene.`
+    : kind === 'win' ? `Em ${c}, o agente, com o mandado do STF na mão, algema o 01 sob luzes de sirene.`
     : a[2] ? 'Dossiê com carimbo ARQUIVADO; o jatinho do 01 vai embora.'
     : `Em ${c}, o 01 foge de jatinho enquanto o agente olha.`;
 }
@@ -533,9 +539,8 @@ function type(el, s, talk) {
   el.onclick = () => { clearInterval(el.typing); el.textContent = s; };
 }
 const balloon = document.getElementById('balloon'), say = balloon.querySelector('#say'), tail = document.getElementById('tail'), news = document.getElementById('news');
-// fala no balão, sobre a cabeça de quem falou (testemunha de 16 unidades em WX, numa cena de 160)
-function talk(s, i) {
-  const x = (WX[i] + 8) / 1.6;
+// fala no balão; x em % da cena, sobre a cabeça de quem falou
+function talk(s, x) {
   balloon.hidden = false;
   tail.style.left = x + '%';
   say.style.left = x < 50 ? '2%' : '';
@@ -611,7 +616,8 @@ function show() {
     art.setAttribute('aria-label', describe(kind, a));
     sr.textContent = [body, speech, ...hl.map(l => l.slice(2))].filter(Boolean).join('\n');
     type(text, body);
-    if (speech) talk(speech, a[4] - 1);
+    // cidade: testemunha de 16 unidades em WX, numa cena de 160; fim: o 01 (vitória), o jatinho ou o carimbo
+    if (speech) talk(speech, kind === 'city' ? (WX[a[4] - 1] + 8) / 1.6 : kind === 'win' ? 57 : a[2] ? 8 : 48);
     headline(hl);
     if (kind === 'win') siren();
     if (kind === 'win' || kind === 'lose') try { localStorage.solved = a[1]; } catch {}
