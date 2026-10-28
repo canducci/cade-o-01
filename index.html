@@ -301,6 +301,32 @@ function draw(kind, a) {
   }
 }
 
+// cartão 1080×1920 com a cena de fim (sem animação CSS) e o resultado; o link vai escrito porque o Instagram descarta o texto
+async function card(share) {
+  const [line, url] = share.split(' Cadê o 01? ');
+  const img = new Image();
+  img.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(art).replace('<svg', '<svg shape-rendering="crispEdges"')], {type: 'image/svg+xml'}));
+  await img.decode();
+  URL.revokeObjectURL(img.src);
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  c.width = 1080; c.height = 1920;
+  g.fillStyle = '#000'; g.fillRect(0, 0, 1080, 1920);
+  g.textAlign = 'center';
+  g.fillStyle = '#ffff55'; g.font = 'bold 110px "Courier New", monospace';
+  g.fillText('CADÊ O 01?', 540, 400);
+  g.drawImage(img, 0, 520, 1080, 608);
+  g.font = '56px "Courier New", monospace';
+  let y = 1280, row = '';
+  for (const word of line.split(' ')) {
+    if (row && g.measureText(row + ' ' + word).width > 960) { g.fillText(row, 540, y); y += 80; row = word; }
+    else row = row ? row + ' ' + word : word;
+  }
+  g.fillText(row, 540, y);
+  g.fillStyle = '#55ffff'; g.font = '44px "Courier New", monospace';
+  g.fillText(url.replace('https://', ''), 540, 1780);
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+
 // descrição em texto de cada cena, para leitor de tela
 function describe(kind, a) {
   const c = CITY_NAME[a[0]];
@@ -379,6 +405,16 @@ function show() {
     l.textContent = `${buttons.length + 1}. 🔗 ${label}`;
     buttons.push(l);
   }
+  // imagem 9:16 para Stories/Status; gerada antes do clique porque o Safari exige share() logo após o toque
+  if (share && navigator.canShare?.({files: [new File([''], 'x.png', {type: 'image/png'})]})) {
+    const b = document.createElement('button');
+    b.textContent = `${buttons.length + 1}. 📲 Compartilhar imagem`;
+    b.disabled = true;
+    let file;
+    b.onclick = () => navigator.share({files: [file], text: share}).catch(() => {});
+    b.prep = () => card(share).then(blob => { file = new File([blob], 'cade-o-01.png', {type: 'image/png'}); b.disabled = false; });
+    buttons.push(b);
+  }
   if (share) {
     const b = document.createElement('button'), label = `${buttons.length + 1}. Copiar resultado`;
     b.textContent = label;
@@ -393,6 +429,7 @@ function show() {
     opts.replaceChildren(...buttons);
     quit.hidden = !['brief', 'city', 'travel'].includes(kind);
     draw(kind, a);
+    buttons.forEach(b => b.prep?.());
     art.setAttribute('aria-label', describe(kind, a));
     sr.textContent = body;
     type(body, kind === 'city' && a[4]);
