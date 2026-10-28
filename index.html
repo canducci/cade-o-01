@@ -5,32 +5,219 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cadê o 01?</title>
 <style>
-  body { background: #001a33; color: #ffd84d; font: 18px/1.5 "Courier New", monospace; max-width: 760px; margin: 2em auto; padding: 0 1em; }
-  #text { white-space: pre-wrap; border: 3px double #ffd84d; padding: 1em; background: #002b55; }
-  #opts button { display: block; width: 100%; margin: .4em 0; padding: .5em; text-align: left; font: inherit; color: #001a33; background: #ffd84d; border: 0; cursor: pointer; }
+  body { background: #000; color: #ffff55; font: 18px/1.5 "Courier New", monospace; max-width: 760px; margin: 1.5em auto; padding: 0 1em; }
+  #art { display: block; width: 100%; aspect-ratio: 16 / 9; border: 4px solid #aaaaaa; border-bottom: 0; background: #0000aa; shape-rendering: crispEdges; }
+  #text { white-space: pre-wrap; border: 4px solid #aaaaaa; padding: 1em; background: #0000aa; min-height: 6em; cursor: pointer; }
+  #opts button { display: block; width: 100%; margin: .4em 0; padding: .5em; text-align: left; font: inherit; color: #000; background: #55ffff; border: 0; cursor: pointer; }
   #opts button:hover, #opts button:focus { background: #fff; }
+  #opts button:disabled { opacity: .4; }
+  .cloud { animation: drift linear infinite; }
+  @keyframes drift { from { transform: translateX(-60px); } to { transform: translateX(200px); } }
+  .rain { animation: fall .5s linear infinite; }
+  @keyframes fall { from { transform: translateY(-10px); } to { transform: translateY(10px); } }
+  .spin { transform-box: fill-box; transform-origin: center; animation: spin 8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .blink { animation: blink .6s steps(1) infinite; }
+  .blink2 { animation: blink .6s steps(1) infinite .3s; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .bob { animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(1.5px); } }
+  .away { animation: away 3s ease-in forwards; }
+  @keyframes away { from { transform: translate(0, 0); } to { transform: translate(140px, -70px) scale(.3); } }
 </style>
 </head>
 <body>
+<svg id="art" viewBox="0 0 160 90"></svg>
 <div id="text">Carregando…</div>
 <div id="opts"></div>
 <script type="module">
+// --- arte: tudo desenhado aqui, paleta de 16 cores estilo EGA ---
+const K = { blk: '#000', blu: '#0000aa', grn: '#00aa00', cya: '#00aaaa', red: '#aa0000', mag: '#aa00aa', brn: '#aa5500', gry: '#aaaaaa',
+  dgr: '#555555', lbl: '#5555ff', lgn: '#55ff55', lcy: '#55ffff', lrd: '#ff5555', lmg: '#ff55ff', yel: '#ffff55', wht: '#fff' };
+const R = (x, y, w, h, c, a = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" ${a}/>`;
+const P = (pts, c, a = '') => `<polygon points="${pts}" fill="${c}" ${a}/>`;
+const C = (x, y, r, c, a = '') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" ${a}/>`;
+const D = (d, c, a = '') => `<path d="${d}" fill="${c}" ${a}/>`;
+const T = (x, y, s, c, txt, a = '') => `<text x="${x}" y="${y}" font-size="${s}" fill="${c}" font-family="monospace" ${a}>${txt}</text>`;
+const cloud = (y, dur, delay) => `<g class="cloud" style="animation-duration:${dur}s;animation-delay:-${delay}s">${R(0, y, 18, 4, K.wht)}${R(4, y - 3, 10, 3, K.wht)}</g>`;
+const windows = (x, y, w, h) => { let s = ''; for (let i = x + 2; i < x + w - 1; i += 4) for (let j = y + 3; j < y + h - 2; j += 5) s += R(i, j, 2, 2, K.yel); return s; };
+const palm = x => R(x, 48, 2, 22, K.brn) + P(`${x + 1},47 ${x - 9},52 ${x - 7},49`, K.grn) + P(`${x + 1},47 ${x + 11},52 ${x + 9},49`, K.grn) + P(`${x + 1},47 ${x - 4},42 ${x - 3},45`, K.lgn) + P(`${x + 1},47 ${x + 6},42 ${x + 5},45`, K.lgn);
+const scene = (sky, ground, body, opt = {}) =>
+  R(0, 0, 160, 90, sky) + (opt.sun === false ? '' : C(140, 14, 7, K.yel, 'class="bob"')) +
+  cloud(12, 40, 5) + cloud(22, 55, 30) + R(0, 70, 160, 20, ground) + body;
+
+const CITY = [
+  // Brasília: Congresso
+  () => scene(K.lbl, K.grn, R(25, 60, 110, 6, K.wht) + R(73, 20, 5, 40, K.gry) + R(81, 20, 5, 40, K.gry) + R(73, 34, 13, 2, K.gry) +
+    D('M35 53 Q50 66 65 53 Z', K.wht) + R(48, 58, 4, 2, K.wht) + D('M97 60 Q110 46 123 60 Z', K.wht) + R(0, 66, 160, 4, K.lgn)),
+  // São Paulo: prédios na garoa e o MASP
+  () => scene(K.gry, K.dgr, R(2, 22, 20, 48, K.dgr) + windows(2, 22, 20, 48) + R(24, 32, 16, 38, K.blk) + windows(24, 32, 16, 38) +
+    R(118, 18, 18, 52, K.dgr) + windows(118, 18, 18, 52) + R(138, 30, 20, 40, K.blk) + windows(138, 30, 20, 40) +
+    R(52, 44, 58, 4, K.red) + R(52, 44, 4, 26, K.red) + R(106, 44, 4, 26, K.red) + R(56, 48, 50, 10, K.blk) + windows(56, 48, 50, 10) +
+    `<g class="rain">${[10, 30, 50, 70, 90, 110, 130, 150].map((x, i) => R(x, 8 + (i % 3) * 14, 1, 4, K.lcy)).join('')}</g>`, { sun: false }),
+  // Rio: Corcovado com o Cristo, Pão de Açúcar
+  () => scene(K.lcy, K.blu, P('0,70 38,26 76,70', K.grn) + R(37, 14, 3, 13, K.wht) + R(31, 17, 15, 2, K.wht) +
+    P('92,70 106,42 116,48 122,70', K.grn) + P('122,70 138,34 156,70', K.grn) + D('M106 42 L138 34', 'none', `stroke="${K.blk}" stroke-width=".5"`) +
+    R(0, 70, 160, 4, K.yel) + `<g class="bob">${R(20, 80, 8, 1, K.lcy)}${R(90, 84, 10, 1, K.lcy)}</g>`),
+  // Buenos Aires: Obelisco e Casa Rosada
+  () => scene(K.lbl, K.dgr, R(70, 18, 8, 52, K.wht) + P('70,18 74,8 78,18', K.wht) + R(73, 30, 2, 2, K.dgr) +
+    R(104, 48, 50, 22, K.lmg) + P('104,48 129,40 154,48', K.lmg) + windows(104, 48, 50, 22).replaceAll(K.yel, K.wht) +
+    R(8, 50, 3, 20, K.brn) + C(10, 46, 8, K.grn) + R(0, 70, 160, 2, K.yel)),
+  // Guayaquil: Malecón, rio Guayas, farol no morro, iguana
+  () => scene(K.lcy, K.blu, P('96,70 126,40 160,52 160,70', K.grn) + R(122, 28, 5, 13, K.wht) + R(121, 25, 7, 3, K.red) +
+    `<g class="blink">${C(124.5, 24, 1.5, K.yel)}</g>` + R(100, 54, 6, 6, K.lmg) + R(110, 50, 6, 8, K.yel) + R(136, 50, 6, 6, K.lcy) +
+    R(0, 66, 92, 4, K.gry) + palm(20) + palm(62) + `<g class="bob">${R(40, 63, 10, 3, K.lgn)}${R(49, 62, 3, 2, K.lgn)}${R(34, 64, 6, 1, K.lgn)}</g>`),
+  // Miami: praia, palmeira e prédio art déco
+  () => scene(K.lcy, K.blu, R(0, 66, 160, 8, K.yel) + R(92, 26, 34, 40, K.lmg) + R(92, 34, 34, 3, K.lcy) + R(92, 46, 34, 3, K.lcy) +
+    R(105, 20, 8, 6, K.lmg) + windows(92, 26, 34, 40).replaceAll(K.yel, K.wht) + palm(30) + palm(60) + palm(140) +
+    R(48, 62, 10, 4, K.red) + P('53,54 46,62 60,62', K.lrd) + `<g class="bob">${R(10, 80, 12, 1, K.lcy)}${R(70, 84, 14, 1, K.lcy)}</g>`),
+  // Orlando: roda-gigante girando e montanha-russa
+  () => scene(K.lbl, K.grn, `<g class="spin"><circle cx="45" cy="40" r="22" fill="none" stroke="${K.wht}" stroke-width="1.5"/>` +
+    [0, 45, 90, 135].map(a => `<line x1="45" y1="40" x2="${45 + 22 * Math.cos(a * Math.PI / 180)}" y2="${40 + 22 * Math.sin(a * Math.PI / 180)}" stroke="${K.wht}" transform="rotate(0)"/><line x1="45" y1="40" x2="${45 - 22 * Math.cos(a * Math.PI / 180)}" y2="${40 - 22 * Math.sin(a * Math.PI / 180)}" stroke="${K.wht}"/>`).join('') +
+    [0, 60, 120, 180, 240, 300].map(a => C(45 + 22 * Math.cos(a * Math.PI / 180), 40 + 22 * Math.sin(a * Math.PI / 180), 3, [K.red, K.yel, K.lcy][a / 60 % 3])).join('') + `</g>` +
+    P('40,70 45,40 50,70', K.gry) + D('M80 70 L90 30 Q100 10 108 40 Q112 60 120 50 Q130 25 140 45 L150 70', 'none', `stroke="${K.lrd}" stroke-width="2"`)),
+  // Washington: Capitólio e o obelisco
+  () => scene(K.lbl, K.grn, R(36, 12, 7, 58, K.wht) + P('36,12 39.5,4 43,12', K.wht) + R(39, 20, 1, 1, K.red, 'class="blink"') +
+    R(84, 54, 70, 16, K.wht) + R(108, 44, 22, 10, K.wht) + D('M106 44 Q119 22 132 44 Z', K.wht) + R(117, 24, 4, 6, K.wht) +
+    [88, 94, 100, 136, 142, 148].map(x => R(x, 57, 2, 13, K.gry)).join('') + R(0, 70, 160, 3, K.lgn)),
+  // Jerusalém: Domo dourado e a muralha
+  () => scene(K.lcy, K.brn, R(52, 40, 50, 18, K.lbl) + windows(52, 40, 50, 18).replaceAll(K.yel, K.wht) + D('M60 40 Q77 16 94 40 Z', K.yel) +
+    R(76, 18, 2, 6, K.yel) + R(0, 56, 160, 14, K.gry) + [0, 16, 32, 48, 64, 80, 96, 112, 128, 144].map((x, i) => R(x + (i % 2) * 4, 60, 12, 1, K.dgr) + R(x, 65, 12, 1, K.dgr)).join('') +
+    R(10, 50, 6, 6, K.gry) + R(144, 50, 6, 6, K.gry), { sun: false }),
+  // Roma: Coliseu
+  () => scene(K.lbl, K.brn, P('30,70 30,30 70,24 130,30 130,70', K.yel) + P('100,26 130,30 130,40', K.lbl) +
+    [34, 46, 58, 70, 82, 94, 106, 118].map(x => R(x, 36, 7, 8, K.brn) + R(x, 50, 7, 8, K.brn) + R(x, 62, 7, 8, K.brn)).join('') +
+    R(30, 46, 100, 1, K.brn) + R(30, 59, 100, 1, K.brn)),
+  // Lisboa: casinhas na colina e o elétrico amarelo
+  () => scene(K.lcy, K.gry, P('0,70 0,40 60,30 160,46 160,70', K.lgn) +
+    [[6, 40, K.wht], [20, 36, K.yel], [34, 34, K.lrd], [50, 32, K.wht], [70, 34, K.lcy], [90, 38, K.yel], [110, 40, K.wht], [130, 43, K.lmg]].map(([x, y, c]) => R(x, y, 10, 8, c) + P(`${x - 1},${y} ${x + 5},${y - 4} ${x + 11},${y}`, K.red)).join('') +
+    `<g class="bob">${R(54, 54, 40, 14, K.yel)}${R(54, 60, 40, 2, K.red)}${windows(54, 54, 40, 6).replaceAll(K.yel, K.lcy)}${C(62, 69, 2, K.blk)}${C(86, 69, 2, K.blk)}${R(73, 46, 1, 8, K.blk)}</g>` + R(0, 69, 160, 1, K.dgr)),
+  // Funchal: ilha, casinhas e navio
+  () => scene(K.lbl, K.blu, P('10,70 50,24 80,36 120,22 150,70', K.grn) + P('50,24 62,30 80,36 66,38', K.lgn) +
+    [[60, 52], [72, 56], [84, 50], [96, 58], [108, 54]].map(([x, y]) => R(x, y, 6, 5, K.wht) + R(x, y - 1, 6, 1, K.red)).join('') +
+    `<g class="bob">${P('20,76 50,76 46,82 24,82', K.wht)}${R(30, 70, 10, 6, K.wht)}${R(34, 66, 3, 4, K.red)}</g>`),
+];
+
+// --- mapa: continentes grosseiros em lon/lat (equiretangular) ---
+const CITY_LL = [[-47.9, -15.8], [-46.6, -23.5], [-43.2, -22.9], [-58.4, -34.6], [-79.9, -2.2], [-80.2, 25.8],
+  [-81.4, 28.5], [-77.0, 38.9], [35.2, 31.8], [12.5, 41.9], [-9.1, 38.7], [-16.9, 32.7]];
+const CITY_NAME = ['Brasília', 'São Paulo', 'Rio', 'Buenos Aires', 'Guayaquil', 'Miami', 'Orlando', 'Washington', 'Jerusalém', 'Roma', 'Lisboa', 'Funchal'];
+const LAND = [
+  [-80, 10, -75, 11, -62, 11, -50, 2, -35, -5, -39, -15, -41, -22, -48, -26, -53, -34, -58, -38, -65, -42, -68, -55, -73, -50, -72, -35, -71, -18, -77, -12, -81, -5, -80, 1],
+  [-100, 55, -60, 55, -60, 47, -66, 44, -70, 41, -76, 35, -81, 31, -80, 25, -83, 29, -90, 30, -97, 27, -97, 20, -90, 21, -87, 15, -83, 9, -78, 8, -83, 12, -92, 15, -100, 17],
+  [-17, 21, -17, 15, -10, 5, 5, 5, 10, 3, 9, -2, 13, -12, 12, -17, 15, -27, 20, -35, 28, -33, 35, -23, 40, -15, 40, -5, 51, 12, 43, 12, 32, 30, 20, 32, 10, 37, -6, 36, -10, 30],
+  [-10, 37, -9, 43, -2, 44, -5, 48, 5, 52, 8, 55, 45, 55, 45, 40, 35, 37, 26, 40, 23, 36, 19, 40, 18, 45, 12, 44, 16, 40, 12, 38, 8, 44, 3, 43, -2, 37],
+  [35, 32, 36, 36, 45, 37, 45, 30, 48, 29, 55, 25, 58, 22, 52, 15, 43, 12, 38, 18, 34, 28],
+];
+// viewBox do mapa = mesma área 160x90 do cartão postal
+const mx = lon => (lon + 100) * 160 / 150, my = lat => (55 - lat) * 90 / 110;
+const xy = c => [mx(CITY_LL[c][0]), my(CITY_LL[c][1])];
+const map = () => R(0, 0, 160, 90, K.blu) +
+  [20, 40, 60, 80, 100, 120, 140].map(x => R(x, 0, .3, 90, K.lbl)).join('') + [15, 30, 45, 60, 75].map(y => R(0, y, 160, .3, K.lbl)).join('') +
+  LAND.map(a => P(a.map((v, i) => i % 2 ? my(v) : mx(v)).join(' '), K.grn)).join('');
+const dot = (c, color, label = '', a = '') => { const [x, y] = xy(c); return C(x, y, 1.6, color, a) + (label ? (x > 115 ? T(x - 2.5, y + 1.5, 4, K.wht, label, 'text-anchor="end"') : T(x + 2.5, y + 1.5, 4, K.wht, label)) : ''); };
+const PLANE = `<polygon points="5,0 1,1 -1,4 -2.5,4 -1.5,1 -3.5,1 -4.5,2.5 -5.5,2.5 -4.5,0 -5.5,-2.5 -4.5,-2.5 -3.5,-1 -1.5,-1 -2.5,-4 -1,-4 1,-1" fill="${K.wht}" stroke="${K.blk}" stroke-width=".3"/>`;
+
+const art = document.getElementById('art');
+function draw(kind, a) {
+  if (kind === 'title') {
+    art.innerHTML = map() + CITY_LL.map((_, c) => dot(c, K.yel)).join('') + `<g id="plane">${PLANE}</g>` +
+      R(14, 30, 132, 22, K.blk, 'opacity=".7"') + T(80, 47, 15, K.yel, 'CADÊ O 01?', 'text-anchor="middle" font-weight="bold"');
+    titleLoop();
+  } else if (kind === 'dossie') {
+    art.innerHTML = R(0, 0, 160, 90, K.dgr) + R(30, 12, 40, 8, K.brn) + R(30, 18, 100, 64, K.brn) + R(34, 22, 92, 56, K.yel) +
+      [30, 36, 42, 48, 54, 60, 66].map(y => R(40, y, 70 - (y % 12) * 2, 2, K.dgr)).join('') +
+      `<g transform="rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, 'CONFIDENCIAL', 'text-anchor="middle" font-weight="bold"')}</g>`;
+  } else if (kind === 'city') {
+    art.innerHTML = CITY[a[0]]();
+  } else if (kind === 'travel') {
+    art.innerHTML = map() + dot(a[0], K.lrd, '', 'class="blink"') + a.slice(1).map((c, i) => dot(c, K.yel, `${i + 1}.${CITY_NAME[c]}`)).join('');
+  } else if (kind === 'win') {
+    art.innerHTML = CITY[a[0]]() + R(0, 0, 160, 90, K.blk, 'opacity=".35"') +
+      `<g class="blink">${R(0, 0, 80, 6, K.red)}${R(80, 0, 80, 6, K.lbl)}</g><g class="blink2">${R(0, 0, 80, 6, K.lbl)}${R(80, 0, 80, 6, K.red)}</g>` +
+      R(30, 34, 100, 20, K.blk) + T(80, 48, 11, K.lgn, 'PEGO!', 'text-anchor="middle" font-weight="bold"');
+  } else if (kind === 'lose') {
+    art.innerHTML = CITY[a[0]]() + `<g class="away"><g transform="translate(70 50) scale(2.5) rotate(-25)">${PLANE}</g></g>` +
+      T(80, 84, 7, K.wht, 'tchau, querido...', 'text-anchor="middle"');
+  }
+}
+
+// avião voando por uma curva entre duas cidades
+function fly(from, to, ms, done) {
+  const [x1, y1] = xy(from), [x2, y2] = xy(to);
+  const cx = (x1 + x2) / 2, cy = Math.min(y1, y2) - Math.hypot(x2 - x1, y2 - y1) * .3;
+  const path = art.querySelector('#trail') ?? art.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'path'));
+  path.id = 'trail';
+  path.setAttribute('d', `M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}`);
+  path.setAttribute('fill', 'none'); path.setAttribute('stroke', K.wht); path.setAttribute('stroke-dasharray', '1.5 1.5'); path.setAttribute('stroke-width', '.5');
+  const plane = art.querySelector('#plane') ?? (art.insertAdjacentHTML('beforeend', `<g id="plane">${PLANE}</g>`), art.querySelector('#plane'));
+  const t0 = performance.now();
+  (function step(now) {
+    const t = Math.min(1, (now - t0) / ms), u = 1 - t;
+    const x = u * u * x1 + 2 * u * t * cx + t * t * x2, y = u * u * y1 + 2 * u * t * cy + t * t * y2;
+    const ang = Math.atan2(2 * u * (cy - y1) + 2 * t * (y2 - cy), 2 * u * (cx - x1) + 2 * t * (x2 - cx)) * 180 / Math.PI;
+    plane.setAttribute('transform', `translate(${x} ${y}) rotate(${ang}) scale(1.2)`);
+    if (t < 1 && plane.isConnected) requestAnimationFrame(step); else if (done) done();
+  })(t0);
+}
+
+let titleRun = 0;
+function titleLoop(from = 0) {
+  const run = ++titleRun, to = (from + 1 + Math.floor(Math.random() * 11)) % 12;
+  fly(from, to, 2200, () => { if (run === titleRun && scene0 === 'title') titleLoop(to); });
+}
+
+// --- ponte com o wasm ---
 const { instance } = await WebAssembly.instantiateStreaming(fetch('game.wasm'));
 const w = instance.exports;
 const dec = new TextDecoder('utf-8');
 const text = document.getElementById('text'), opts = document.getElementById('opts');
+let scene0 = '', city0 = -1, busy = false, typing = 0;
+
+function type(s) {
+  clearInterval(typing);
+  let n = 0;
+  typing = setInterval(() => { n += 3; text.textContent = s.slice(0, n); if (n >= s.length) clearInterval(typing); }, 12);
+  text.onclick = () => { clearInterval(typing); text.textContent = s; };
+}
+
+function choose(i) {
+  if (busy) return;
+  w.act(i);
+  show();
+}
 
 function show() {
   const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
-  text.textContent = lines.filter(l => !l.startsWith('> ')).join('\n');
-  opts.replaceChildren(...lines.filter(l => l.startsWith('> ')).map((l, i) => {
+  const [kind, ...args] = lines[0].slice(1).split(' ');
+  const a = args.map(Number);
+  const body = lines.slice(1).filter(l => !l.startsWith('> ')).join('\n');
+  const buttons = lines.filter(l => l.startsWith('> ')).map((l, i) => {
     const b = document.createElement('button');
     b.textContent = `${i + 1}. ${l.slice(2)}`;
-    b.onclick = () => { w.act(i); show(); };
+    b.onclick = () => choose(i);
     return b;
-  }));
+  });
+  const finish = () => {
+    busy = false;
+    buttons.forEach(b => b.disabled = false);
+    draw(kind, a);
+    type(body);
+  };
+  opts.replaceChildren(...buttons);
+  const flying = scene0 === 'travel' && kind !== 'travel' && a[0] !== city0;
+  if (flying) {
+    busy = true;
+    buttons.forEach(b => b.disabled = true);
+    text.textContent = '✈️ Voando...';
+    fly(city0, a[0], 1600, finish);
+  } else finish();
+  if (kind !== 'title') titleRun++;
+  scene0 = kind;
+  if (kind !== 'title' && kind !== 'dossie') city0 = a[0];
 }
-addEventListener('keydown', e => { const n = +e.key; if (n >= 1 && n <= opts.children.length) { w.act(n - 1); show(); } });
+
+addEventListener('keydown', e => { const n = +e.key; if (n >= 1 && n <= opts.children.length) choose(n - 1); });
 w.start(Date.now() >>> 0);
 show();
 </script>

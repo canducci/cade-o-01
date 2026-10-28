@@ -386,8 +386,20 @@ impl Game {
             CITIES[self.here].name, self.hours, self.provas, if self.mandado { "sim" } else { "não" })
     }
 
+    // Primeira linha "@cena args" diz ao JS o que desenhar.
+    fn scene(&self) -> String {
+        match self.screen {
+            Screen::Title => "@title".into(),
+            Screen::DossieList | Screen::Dossie(_) => "@dossie".into(),
+            Screen::Brief | Screen::City => format!("@city {}", self.here),
+            Screen::Travel => format!("@travel {} {}", self.here, self.dests.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" ")),
+            Screen::End => format!("@{} {}", if self.end.contains("🏆") { "win" } else { "lose" }, self.here),
+        }
+    }
+
     pub fn render(&self) -> String {
-        let mut s = match self.screen {
+        let mut s = self.scene() + "\n";
+        s += &match self.screen {
             Screen::Title => "CADÊ O 01?\nUma perseguição satírica pelo mundo\n\n\
 ⚠️ PARÓDIA. Personagem inspirado em figura pública real. As acusações são descritas conforme reportagens, \
 com o status de cada caso na seção Dossiês. Não há condenação nos casos citados e vale a presunção de inocência. \
