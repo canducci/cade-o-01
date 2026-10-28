@@ -12,6 +12,8 @@ w.act(0);
 // interrogar custa 2h: horas = prazo - 2
 const m = read().match(/^@city \d+ \d+ \d+ \d+ 1 1 (\d+) (\d+)\n/);
 if (!m || +m[1] !== m[2] - 2) throw new Error('linha de cena: ' + read().split('\n')[0]);
+// a fala da testemunha vem numa linha própria, que o JS põe no balão
+if (!/\n" .+: "/.test(read())) throw new Error('fala: ' + read());
 console.log(read());
 // carreira: o total entra no início e volta na linha de cena de fim
 w.start(42, 7);
