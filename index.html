@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cadê o 01?</title>
+<style>
+  body { background: #001a33; color: #ffd84d; font: 18px/1.5 "Courier New", monospace; max-width: 760px; margin: 2em auto; padding: 0 1em; }
+  #text { white-space: pre-wrap; border: 3px double #ffd84d; padding: 1em; background: #002b55; }
+  #opts button { display: block; width: 100%; margin: .4em 0; padding: .5em; text-align: left; font: inherit; color: #001a33; background: #ffd84d; border: 0; cursor: pointer; }
+  #opts button:hover, #opts button:focus { background: #fff; }
+</style>
+</head>
+<body>
+<div id="text">Carregando…</div>
+<div id="opts"></div>
+<script type="module">
+const { instance } = await WebAssembly.instantiateStreaming(fetch('game.wasm'));
+const w = instance.exports;
+const dec = new TextDecoder('utf-8');
+const text = document.getElementById('text'), opts = document.getElementById('opts');
+
+function show() {
+  const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
+  text.textContent = lines.filter(l => !l.startsWith('> ')).join('\n');
+  opts.replaceChildren(...lines.filter(l => l.startsWith('> ')).map((l, i) => {
+    const b = document.createElement('button');
+    b.textContent = `${i + 1}. ${l.slice(2)}`;
+    b.onclick = () => { w.act(i); show(); };
+    return b;
+  }));
+}
+addEventListener('keydown', e => { const n = +e.key; if (n >= 1 && n <= opts.children.length) { w.act(n - 1); show(); } });
+w.start(Date.now() >>> 0);
+show();
+</script>
+</body>
+</html>

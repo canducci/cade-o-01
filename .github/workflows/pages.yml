@@ -1,0 +1,23 @@
+name: pages
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add wasm32-unknown-unknown
+      - run: cargo test
+      - run: cargo build --release --target wasm32-unknown-unknown
+      - run: cp target/wasm32-unknown-unknown/release/cade_o_01.wasm game.wasm && node check.mjs
+      - name: publicar no gh-pages
+        run: |
+          mkdir dist && cp index.html game.wasm dist/ && touch dist/.nojekyll
+          cd dist
+          git init -q -b gh-pages
+          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git add -A && git commit -qm "build ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" gh-pages
