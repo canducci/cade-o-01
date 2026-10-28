@@ -6,6 +6,7 @@ struct City {
     desc: &'static str,
     people: [&'static str; 3], // testemunhas locais
     clues: [&'static str; 4],
+    vague: [&'static str; 4], // pistas sem nome de lugar, para os postos altos
 }
 
 const BSB: usize = 0;
@@ -35,6 +36,11 @@ const CITIES: &[City] = &[
         "Perguntou se o Lago Paranoá tinha vista pra alguma mansão de R$ 6 milhões.",
         "Queria chegar a tempo de uma sessão no Congresso Nacional.",
         "Reclamou da umidade de 12% do Planalto Central.",
+    ], vague: [
+        "Falou que ia pra uma cidade planejada no meio do cerrado.",
+        "Disse que lá até a catedral parece uma coroa de concreto.",
+        "Reclamou que lá não tem esquina, só tesourinha.",
+        "Disse que ia pra onde o endereço parece senha: SQS, bloco, apartamento.",
     ]},
     City { name: "São Paulo", desc: "Maior cidade do país. Trânsito, garoa e banqueiros na Faria Lima.",
         people: ["Banqueiro da Faria Lima", "Pasteleiro da feira", "Motoboy"], clues: [
@@ -42,6 +48,11 @@ const CITIES: &[City] = &[
         "Perguntou onde ficava o MASP, na Avenida Paulista.",
         "Levou guarda-chuva por causa da garoa.",
         "Queria comer pastel de feira e ver um jogo no Morumbi.",
+    ], vague: [
+        "Queria provar a pizza que dizem ser melhor que a de Nápoles.",
+        "Disse que ia pra maior cidade do hemisfério sul.",
+        "Disse que ia pra onde a garoa é marca registrada.",
+        "Queria ver o maior engarrafamento do país num feriado.",
     ]},
     City { name: "Rio de Janeiro", desc: "Cidade Maravilhosa. Cristo Redentor, praia e a velha ALERJ.",
         people: ["Vendedor de mate na praia", "Ex-servidor da ALERJ", "Surfista do Arpoador"], clues: [
@@ -49,6 +60,11 @@ const CITIES: &[City] = &[
         "Queria ver o Cristo Redentor de perto.",
         "Falou de uma loja de chocolates num shopping da Barra da Tijuca.",
         "Ia assistir a um jogo no Maracanã.",
+    ], vague: [
+        "Disse que ia pra antiga capital, de frente pro mar.",
+        "Queria subir um morro de bondinho pra ver a baía.",
+        "Disse que ia passar o réveillon de branco numa praia famosa.",
+        "Perguntou se o biscoito de polvilho ainda vende na areia.",
     ]},
     City { name: "Buenos Aires", desc: "Capital argentina. Tango, parrilla e Casa Rosada.",
         people: ["Dançarina de tango", "Parrillero de San Telmo", "Cambista do dólar blue"], clues: [
@@ -56,6 +72,11 @@ const CITIES: &[City] = &[
         "Queria tirar foto no Obelisco da Avenida 9 de Julio.",
         "Perguntou o caminho para a Casa Rosada.",
         "Pediu doce de leite e uma aula de tango.",
+    ], vague: [
+        "Disse que ia pra onde o dólar tem cor.",
+        "Perguntou se os vizinhos ainda falam de Maradona em cada esquina.",
+        "Queria jantar um bife de chorizo bem tarde, depois das onze.",
+        "Disse que ia pra onde chamam ônibus de 'colectivo'.",
     ]},
     City { name: "Guayaquil", desc: "Maior cidade do Equador, porto no Pacífico. Calor e iguanas no parque.",
         people: ["Vendedor de chapéu-panamá", "Guia do Malecón", "Atendente do aeroporto"], clues: [
@@ -63,6 +84,11 @@ const CITIES: &[City] = &[
         "Queria passear no Malecón 2000, à beira do rio Guayas.",
         "Perguntou se dava pra ver iguanas soltas num parque do centro.",
         "Disse que ia pra um país com nome de linha imaginária.",
+    ], vague: [
+        "Disse que ia pra um porto no Pacífico onde a moeda é o dólar.",
+        "Comprou um chapéu que leva o nome de outro país.",
+        "Disse que ia pra um país cortado ao meio pela linha do equador.",
+        "Queria ver um parque cheio de iguanas no meio da cidade.",
     ]},
     City { name: "Miami", desc: "Flórida. Praia, Little Havana e brasileiros comprando eletrônicos.",
         people: ["Salva-vidas de South Beach", "Barista de Little Havana", "Brasileiro com seis malas"], clues: [
@@ -70,6 +96,11 @@ const CITIES: &[City] = &[
         "Quis tomar um cafecito em Little Havana.",
         "Disse que ia pra Flórida, mas não pra ver o Mickey.",
         "Perguntou quanto tempo de carro até Mar-a-Lago, em Palm Beach.",
+    ], vague: [
+        "Disse que ia pra onde se fala mais espanhol que inglês, mas nos EUA.",
+        "Queria pegar sol numa praia de prédios art déco.",
+        "Queria um sanduíche cubano e um cafezinho bem forte.",
+        "Disse que ia pra onde os brasileiros voltam com seis malas de eletrônicos.",
     ]},
     City { name: "Orlando", desc: "Flórida central. Parques temáticos e filas intermináveis.",
         people: ["Pessoa fantasiada de mascote", "Vendedor de ingressos", "Brasileira na fila da montanha-russa"], clues: [
@@ -77,6 +108,11 @@ const CITIES: &[City] = &[
         "Perguntou sobre ingressos para parques temáticos.",
         "Ia fazer compras nos outlets da Flórida, longe da praia.",
         "Disse que ia pra capital mundial das montanhas-russas.",
+    ], vague: [
+        "Disse que ia pra uma cidade sem praia, mas cheia de castelos.",
+        "Reclamou do calor do centro da Flórida.",
+        "Comprou orelhas de rato pra usar numa fila de três horas.",
+        "Disse que ia pra onde todo brasileiro de 15 anos quer viajar.",
     ]},
     City { name: "Washington", desc: "Capital dos EUA. Casa Branca, Capitólio e lobistas.",
         people: ["Lobista da K Street", "Guarda do Capitólio", "Estagiário do Depto. de Estado"], clues: [
@@ -84,6 +120,11 @@ const CITIES: &[City] = &[
         "Queria ver a Casa Branca pessoalmente.",
         "Perguntou onde fica o Capitólio.",
         "Disse que ia pra uma cidade com um obelisco gigante e muitos lobistas.",
+    ], vague: [
+        "Disse que ia pra uma capital com nome de presidente.",
+        "Queria ver de perto o Congresso que invadiram em 2021, só que o de lá.",
+        "Disse que ia pra onde fica a casa mais vigiada do mundo.",
+        "Queria visitar museus de graça numa capital estrangeira.",
     ]},
     City { name: "Jerusalém", desc: "Cidade sagrada para três religiões, em Israel.",
         people: ["Guia da Cidade Velha", "Vendedor de falafel", "Peregrino"], clues: [
@@ -91,6 +132,11 @@ const CITIES: &[City] = &[
         "Queria rezar no Muro das Lamentações.",
         "Disse que ia a um país com a Estrela de Davi na bandeira.",
         "Estava treinando o 'shalom'.",
+    ], vague: [
+        "Disse que ia rezar numa cidade sagrada para três religiões.",
+        "Queria levar uma garrafa de água do rio Jordão.",
+        "Perguntou se lá o transporte para no sábado.",
+        "Disse que ia pra uma cidade murada, cheia de peregrinos.",
     ]},
     City { name: "Roma", desc: "Capital da Itália. Coliseu, Vaticano e burocracia consular.",
         people: ["Atendente da cidadania italiana", "Gladiador de foto", "Guarda suíço"], clues: [
@@ -98,6 +144,11 @@ const CITIES: &[City] = &[
         "Queria ver o Coliseu.",
         "Perguntou se o Papa recebia visitas.",
         "Pagou em euro e pediu um espresso.",
+    ], vague: [
+        "Disse que todos os caminhos levam pra lá.",
+        "Queria jogar uma moeda numa fonte pra garantir a volta.",
+        "Disse que ia pra onde fica o menor país do mundo, dentro de uma cidade.",
+        "Queria ver uma arena onde gladiadores lutavam.",
     ]},
     City { name: "Lisboa", desc: "Capital de Portugal. Pastel de nata, elétrico 28 e muitos brasileiros.",
         people: ["Motorneiro do elétrico 28", "Fadista de Alfama", "Pasteleiro de Belém"], clues: [
@@ -105,6 +156,11 @@ const CITIES: &[City] = &[
         "Perguntou como pegar o elétrico 28.",
         "Disse que ia pra onde falam português 'com sotaque'.",
         "Ia ouvir fado em Alfama.",
+    ], vague: [
+        "Disse que ia pra terra do bacalhau, mas na capital.",
+        "Queria ver a ponte vermelha sobre o Tejo.",
+        "Disse que ia pra uma capital de bondinhos amarelos e ladeiras.",
+        "Queria ouvir uma canção triste numa taberna antiga.",
     ]},
     City { name: "Funchal", desc: "Ilha da Madeira, Portugal. Vinho, levadas e empresas offshore.",
         people: ["Contador de offshore", "Guia das levadas", "Produtor de vinho Madeira"], clues: [
@@ -112,6 +168,11 @@ const CITIES: &[City] = &[
         "Queria provar vinho Madeira.",
         "Perguntou pela terra natal do Cristiano Ronaldo.",
         "Comentou de uma holding registrada numa ilha portuguesa.",
+    ], vague: [
+        "Disse que ia pra uma ilha famosa pelo réveillon com fogos.",
+        "Queria descer a ladeira num carrinho de cesto.",
+        "Disse que ia pra uma ilha onde nasceu um craque de futebol.",
+        "Queria ver bananeiras na encosta de um vulcão.",
     ]},
 ];
 
@@ -259,6 +320,8 @@ const RANKS: [Posto; 5] = [
     Posto { need: 10, name: "Delegado-chefe", abbr: "Del.-chefe", slack: 16 },
 ];
 fn rank(solved: u32) -> usize { RANKS.iter().rposition(|r| solved >= r.need).unwrap() }
+// a partir de Delegado: só pistas vagas e destinos errados perto do certo
+const SHARP: usize = 3;
 const H_ASK: i32 = 2;
 // depois de cada viagem, 1 em EVENT_ODDS chances de um evento (atraso, habeas corpus, vazamento)
 const EVENT_ODDS: usize = 5;
@@ -309,6 +372,7 @@ impl Game {
     }
 
     fn posto(&self) -> &'static Posto { &RANKS[rank(self.solved)] }
+    fn sharp(&self) -> bool { rank(self.solved) >= SHARP }
     // prazo = rota sem erro (voos + 3 interrogatórios por cidade + mandado) + folga do posto
     fn deadline(&self) -> i32 {
         let flights: i32 = self.route.windows(2).map(|w| flight(w[0], w[1])).sum();
@@ -386,7 +450,8 @@ impl Game {
             }
         } else {
             let next = self.route[self.step + 1];
-            let clue = CITIES[next].clues[self.rand(4)];
+            let c = &CITIES[next];
+            let clue = if self.sharp() { c.vague[self.rand(4)] } else { c.clues[self.rand(4)] };
             self.msg = format!("\" {}: \"{}{}\"", who, hi, clue);
             if slot == self.prova_slot && !self.prova_taken {
                 self.prova_taken = true;
@@ -403,9 +468,15 @@ impl Game {
             else if self.step < self.last() { Some(self.route[self.step + 1]) }
             else { None };
         let mut d: Vec<usize> = correct.into_iter().collect();
+        // nos postos altos, os errados saem das 5 cidades mais perto do certo (Miami/Orlando, Lisboa/Funchal)
+        let mut near: Vec<usize> = (0..CITIES.len()).filter(|&x| x != self.here && Some(x) != correct).collect();
+        if let (true, Some(c)) = (self.sharp(), correct) {
+            near.sort_by_key(|&x| flight(c, x));
+            near.truncate(5);
+        }
         while d.len() < 4 {
-            let x = self.rand(CITIES.len());
-            if x != self.here && !d.contains(&x) { d.push(x); }
+            let x = near.swap_remove(self.rand(near.len()));
+            d.push(x);
         }
         for i in (1..d.len()).rev() {
             let j = self.rand(i + 1);
@@ -571,15 +642,12 @@ Interrogar: {}h · Viajar: 1h a 15h, pela distância · Mandado: {}h, com {} pro
             Screen::Travel => format!("{}Para onde?", self.header()),
             Screen::End => format!("CASO: {}\n\n{}", CASES[self.case].title, self.end),
         };
-        // linhas "~ " = links (veículo|URL), no dossiê e o canal na tela inicial; o JS vira botões
+        // linhas "~ " = links (veículo|URL) do dossiê; o JS vira botões
         // na cidade: "\" " = fala da testemunha (vai pro balão), "+ "/"- " = notícia boa/ruim (vira faixa)
         if let Screen::Dossie(i) = self.screen {
             for (label, url) in CASES[i].fontes {
                 s += &format!("\n~ {}|{}", label, url);
             }
-        }
-        if self.screen == Screen::Title {
-            s += "\n~ Canal Exército do Lula no WhatsApp|https://whatsapp.com/channel/0029VbCbRfD7tkj88k3soZ0Y";
         }
         // linha "# " = texto de compartilhar; o JS tira do corpo e põe num botão
         if self.screen == Screen::End {
@@ -800,6 +868,25 @@ mod tests {
         let links: Vec<_> = g.render().lines().filter(|l| l.starts_with("~ ")).map(String::from).collect();
         assert_eq!(links.len(), CASES[7].fontes.len());
         assert!(links[0].starts_with("~ Agência Brasil, 26/10/2026|https://agenciabrasil.ebc.com.br/"));
+    }
+
+    #[test]
+    fn high_rank_gets_vague_clues_and_near_decoys() {
+        for seed in 1..50 {
+            for solved in [0, 6] {
+                let mut g = begin_at(seed, 0, solved);
+                g.act(0);
+                let next = &CITIES[g.route[1]];
+                assert_eq!(solved == 6, next.vague.iter().any(|v| g.msg.contains(v)), "{}", g.msg);
+                g.act(3);
+                if solved == 6 {
+                    let c = g.route[1];
+                    let mut near: Vec<_> = (0..CITIES.len()).filter(|&x| x != g.here && x != c).collect();
+                    near.sort_by_key(|&x| flight(c, x));
+                    assert!(g.dests.iter().all(|d| *d == c || near[..5].contains(d)), "{:?}", g.dests);
+                }
+            }
+        }
     }
 
     #[test]
