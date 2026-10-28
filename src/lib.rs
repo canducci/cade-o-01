@@ -372,7 +372,7 @@ impl Game {
         let who = witness_name(self.witnesses[slot]);
         let hi = hello(self.witnesses[slot]);
         if !self.on_trail() {
-            self.msg = format!("{}: \"{}{}\"", who, hi, NOTHING[self.rand(NOTHING.len())]);
+            self.msg = format!("\" {}: \"{}{}\"", who, hi, NOTHING[self.rand(NOTHING.len())]);
         } else if self.step == self.last() {
             let city = CITIES[self.here].name;
             if self.mandado {
@@ -387,12 +387,12 @@ impl Game {
         } else {
             let next = self.route[self.step + 1];
             let clue = CITIES[next].clues[self.rand(4)];
-            self.msg = format!("{}: \"{}{}\"", who, hi, clue);
+            self.msg = format!("\" {}: \"{}{}\"", who, hi, clue);
             if slot == self.prova_slot && !self.prova_taken {
                 self.prova_taken = true;
                 self.provas += 1;
                 let p = PROVAS[self.rand(PROVAS.len())];
-                self.msg += &format!("\n📎 De quebra, entregou {}. (+1 prova)", p);
+                self.msg += &format!("\n+ 📎 De quebra, entregou {}. (+1 prova)", p);
             }
         }
         self.check_time();
@@ -439,9 +439,9 @@ impl Game {
         // habeas corpus só faz sentido com mandado na mão; sem ele, sorteia entre os outros dois
         let e = if self.mandado { self.rand(3) } else { self.rand(2) * 2 };
         self.msg += match e {
-            0 => { self.hours -= H_DELAY; "\n🕓 Voo atrasado: a companhia aérea pede desculpas pelas 4h perdidas." }
-            1 => { self.mandado = false; "\n⚖️ Habeas corpus surpresa: o mandado caiu. Peça outro ao STF." }
-            _ => { self.provas += 1; "\n📰 Vazamento à imprensa: uma reportagem entrega o que faltava. (+1 prova)" }
+            0 => { self.hours -= H_DELAY; "\n- 🕓 Voo atrasado: a companhia aérea pede desculpas pelas 4h perdidas." }
+            1 => { self.mandado = false; "\n- ⚖️ Habeas corpus surpresa: o mandado caiu. Peça outro ao STF." }
+            _ => { self.provas += 1; "\n+ 📰 Vazamento à imprensa: uma reportagem entrega o que faltava. (+1 prova)" }
         };
     }
 
@@ -456,7 +456,7 @@ impl Game {
                 if self.rand(if self.hard { 2 } else { 3 }) == 0 { annulled += 1; }
             }
             self.provas -= annulled;
-            self.msg = if annulled > 0 { format!("🗑️ {} prova(s) anulada(s) por questões processuais. ", annulled) } else { String::new() };
+            self.msg = if annulled > 0 { format!("- 🗑️ {} prova(s) anulada(s) por questões processuais.\n", annulled) } else { String::new() };
             if self.provas >= NEED {
                 self.mandado = true;
                 self.msg += "✅ Mandado expedido!";
@@ -571,11 +571,15 @@ Interrogar: {}h · Viajar: 1h a 15h, pela distância · Mandado: {}h, com {} pro
             Screen::Travel => format!("{}Para onde?", self.header()),
             Screen::End => format!("CASO: {}\n\n{}", CASES[self.case].title, self.end),
         };
-        // linhas "~ " = fontes do dossiê (veículo|URL); o JS vira links
+        // linhas "~ " = links (veículo|URL), no dossiê e o canal na tela inicial; o JS vira botões
+        // na cidade: "\" " = fala da testemunha (vai pro balão), "+ "/"- " = notícia boa/ruim (vira faixa)
         if let Screen::Dossie(i) = self.screen {
             for (label, url) in CASES[i].fontes {
                 s += &format!("\n~ {}|{}", label, url);
             }
+        }
+        if self.screen == Screen::Title {
+            s += "\n~ Canal Exército do Lula no WhatsApp|https://whatsapp.com/channel/0029VbCbRfD7tkj88k3soZ0Y";
         }
         // linha "# " = texto de compartilhar; o JS tira do corpo e põe num botão
         if self.screen == Screen::End {
@@ -819,6 +823,7 @@ mod tests {
                 g.mandado = mandado;
                 let (h, p) = (g.hours, g.provas);
                 g.event();
+                assert!(g.msg.starts_with("\n+ ") || g.msg.starts_with("\n- "), "{:?}", g.msg);
                 if g.msg.contains("atrasado") { seen[0] = true; assert_eq!(g.hours, h - H_DELAY); }
                 else if g.msg.contains("Habeas") { seen[1] = true; assert!(mandado && !g.mandado); }
                 else { seen[2] = true; assert!(g.msg.contains("Vazamento")); assert_eq!(g.provas, p + 1); }

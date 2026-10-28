@@ -13,6 +13,17 @@
   #screen::after { content: ''; position: absolute; inset: 0; pointer-events: none;
     background: repeating-linear-gradient(rgba(0, 0, 0, .2) 0 1px, transparent 1px 3px), radial-gradient(ellipse, transparent 60%, rgba(0, 0, 0, .4)); }
   #art { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0000aa; shape-rendering: crispEdges; }
+  /* balão de fala sobre a cena; fica abaixo da barra de prazo e acima das linhas de varredura */
+  #screen { container-type: inline-size; }
+  #balloon { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  #say { position: absolute; top: 10%; bottom: 38%; max-width: 64%; display: flex; flex-direction: column; justify-content: flex-end; }
+  #say div { padding: .2em .45em; color: #000; background: #fff; border: 2px solid #000; font-size: max(14px, 3.2cqw); line-height: 1.05; pointer-events: auto; cursor: pointer; }
+  #tail { position: absolute; bottom: calc(38% - 10px); width: 14px; height: 12px; margin-left: -7px; background: #000; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  #tail::after { content: ''; position: absolute; left: 3px; top: 0; width: 8px; height: 8px; background: #fff; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  /* provas e eventos: faixa que pisca ao entrar */
+  .hl { padding: .3em 1em; color: #000; background: #ffff55; border: 2px solid #000; animation: blink .25s steps(1) 4; }
+  .hl.bad { color: #fff; background: #aa0000; }
+  @media (prefers-reduced-motion: reduce) { .hl { animation: none; } }
   #text { white-space: pre-wrap; border: 6px double #aaaaaa; padding: .8em 1em; background: #0000aa; min-height: 6em; cursor: pointer; }
   #opts { display: grid; grid-template-columns: 1fr 1fr; gap: .4em; margin-top: .4em; }
   @media (max-width: 600px) { body { font-size: 20px; } #opts { grid-template-columns: 1fr; } }
@@ -46,7 +57,9 @@
 </head>
 <body>
 <button id="snd" title="Som (tecla S)" aria-label="Ligar ou desligar o som">🔊</button>
-<div id="screen"><svg id="art" viewBox="0 0 160 90" role="img" aria-label="Carregando"></svg></div>
+<div id="screen"><svg id="art" viewBox="0 0 160 90" role="img" aria-label="Carregando"></svg>
+  <div id="balloon" hidden aria-hidden="true"><div id="say"><div></div></div><div id="tail"></div></div></div>
+<div id="news" aria-hidden="true"></div>
 <div id="text" aria-hidden="true">Carregando…</div>
 <div id="sr" class="sr" aria-live="polite"></div>
 <div id="opts"></div>
@@ -81,7 +94,6 @@ const anim = (cls, s) => `<g class="${cls}">${s}</g>`; // animação CSS fora do
 const CLOUD = ['..www....', '.wwwwww..', 'wwwwwwwww'];
 const IGUANA = ['.....GGk', 'GGGGGGG.', '.g..g...'];
 const JET = ['ww...........', 'www..........', 'wwwwwwwwwwww.', 'wCwCwCwCwwwwC', '.wwwwwwwwwww.', '.....ww......', '....ww.......'];
-const BUBBLE = ['.wwwww.', 'wkwkwkw', '.wwwww.', '..w....', '.w.....'];
 
 // personagens 16x26 em pixel de 1 unidade (mesmo tamanho na tela dos antigos 8x13 em pixel 2)
 // H cabelo/chapéu, S camisa, L calça, p pele; minúsculas s/l = sombra do lado direito
@@ -347,19 +359,17 @@ const CITY = [
     R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht') + palm(52, 74, 20),
 ];
 
-// testemunhas na frente da cena; quem acabou de falar ganha balão e boca mexendo
+// testemunhas na frente da cena; quem acabou de falar fica com a boca mexendo (a fala vai no #balloon)
 // contorno de meio pixel: silhueta preta deslocada nas 4 direções
 const outlined = (rows, x, y, s = 2) => {
   const sil = rows.map(r => r.replace(/[^.]/g, 'k'));
   return [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => spr(sil, x + dx, y + dy, '', s)).join('') + spr(rows, x, y, '', s);
 };
-const BUBBLE_L = BUBBLE.map(r => [...r].reverse().join(''));
 // nas laterais, para não tapar o ponto turístico do centro
 const WX = [2, 26, 140];
 const witnesses = (ws, talk) => ws.map((w, i) => {
   const x = WX[i], right = x > 100;
-  return outlined(WITNESS[w], x, FEET - 26, 1) + outlined(PROP[ACC[w]], right ? x + 2 - PROP[ACC[w]][0].length * 2 : x + 14, FEET - 12) + (talk === i + 1 ?
-    anim('bob', outlined(right ? BUBBLE_L : BUBBLE, right ? x - 14 : x + 14, 52)) + anim('blink', R(x + 6, FEET - 18, 4, 2, K.red)) : '');
+  return outlined(WITNESS[w], x, FEET - 26, 1) + outlined(PROP[ACC[w]], right ? x + 2 - PROP[ACC[w]][0].length * 2 : x + 14, FEET - 12) + (talk === i + 1 ? anim('blink', R(x + 6, FEET - 18, 4, 2, K.red)) : '');
 }).join('');
 
 // --- mapa: continentes grosseiros em lon/lat (equiretangular) ---
@@ -513,14 +523,30 @@ const { instance } = await WebAssembly.instantiateStreaming(fetch('game.wasm'));
 const w = instance.exports;
 const dec = new TextDecoder('utf-8');
 const text = document.getElementById('text'), opts = document.getElementById('opts'), sr = document.getElementById('sr');
-let scene0 = '', city0 = -1, busy = false, typing = 0;
+let scene0 = '', city0 = -1, busy = false;
 
-// bipe de digitação só quando uma testemunha fala
-function type(s, talk) {
-  clearInterval(typing);
+// texto aparece aos poucos; bipe de digitação só na fala da testemunha
+function type(el, s, talk) {
+  clearInterval(el.typing);
   let n = 0;
-  typing = setInterval(() => { n += 3; if (talk && n % 12 === 0 && s[n] > ' ') beep(1200 + n % 5 * 60, 6); text.textContent = s.slice(0, n); if (n >= s.length) clearInterval(typing); }, 12);
-  text.onclick = () => { clearInterval(typing); text.textContent = s; };
+  el.typing = setInterval(() => { n += 3; if (talk && n % 12 === 0 && s[n] > ' ') beep(1200 + n % 5 * 60, 6); el.textContent = s.slice(0, n); if (n >= s.length) clearInterval(el.typing); }, 12);
+  el.onclick = () => { clearInterval(el.typing); el.textContent = s; };
+}
+const balloon = document.getElementById('balloon'), say = balloon.querySelector('#say'), tail = document.getElementById('tail'), news = document.getElementById('news');
+// fala no balão, sobre a cabeça de quem falou (testemunha de 16 unidades em WX, numa cena de 160)
+function talk(s, i) {
+  const x = (WX[i] + 8) / 1.6;
+  balloon.hidden = false;
+  tail.style.left = x + '%';
+  say.style.left = x < 50 ? '2%' : '';
+  say.style.right = x < 50 ? '' : '2%';
+  type(say.firstChild, s, true);
+}
+// prova (+) sobe o arpejo; evento ruim (-) desce
+function headline(lines) {
+  news.replaceChildren(...lines.map(l => Object.assign(document.createElement('div'), { className: l[0] === '+' ? 'hl' : 'hl bad', textContent: l.slice(2) })));
+  const notes = lines.some(l => l[0] === '-') ? [392, 330, 262] : lines.length ? [523, 659, 784] : [];
+  notes.forEach((f, i) => beep(f, 120, f, i * 110));
 }
 
 function choose(i) {
@@ -534,7 +560,12 @@ function show() {
   const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
   const [kind, ...args] = lines[0].slice(1).split(' ');
   const a = args.map(Number);
-  const body = lines.slice(1).filter(l => !/^[>#~] /.test(l)).join('\n');
+  const body = lines.slice(1).filter(l => !/^[>#~"+-] /.test(l)).join('\n').trim();
+  // fala da testemunha e notícias (provas/eventos) saem do texto corrido
+  const speech = lines.find(l => l.startsWith('" '))?.slice(2), hl = lines.filter(l => /^[+-] /.test(l));
+  if (kind === 'city' && !speech) a[4] = 0; // depois do mandado ninguém está falando
+  balloon.hidden = true;
+  news.replaceChildren();
   const share = lines.find(l => l.startsWith('# '))?.slice(2);
   const buttons = lines.filter(l => l.startsWith('> ')).map((l, i) => {
     const b = document.createElement('button');
@@ -578,8 +609,10 @@ function show() {
     lastScene = kind + a[0];
     buttons.forEach(b => b.prep?.());
     art.setAttribute('aria-label', describe(kind, a));
-    sr.textContent = body;
-    type(body, kind === 'city' && a[4]);
+    sr.textContent = [body, speech, ...hl.map(l => l.slice(2))].filter(Boolean).join('\n');
+    type(text, body);
+    if (speech) talk(speech, a[4] - 1);
+    headline(hl);
     if (kind === 'win') siren();
     if (kind === 'win' || kind === 'lose') try { localStorage.solved = a[1]; } catch {}
     if (kind === 'lose') beep(440, 900, 110);
