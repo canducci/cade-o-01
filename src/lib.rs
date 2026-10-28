@@ -4,6 +4,7 @@ use std::cell::RefCell;
 struct City {
     name: &'static str,
     desc: &'static str,
+    people: [&'static str; 3], // testemunhas locais
     clues: [&'static str; 4],
 }
 
@@ -15,73 +16,85 @@ const GYE: usize = 4;
 const MIA: usize = 5;
 
 const CITIES: &[City] = &[
-    City { name: "Brasília", desc: "Capital federal. Ar seco, Esplanada dos Ministérios e muito foro privilegiado.", clues: [
+    City { name: "Brasília", desc: "Capital federal. Ar seco, Esplanada dos Ministérios e muito foro privilegiado.",
+        people: ["Lobista do Congresso", "Segurança do Planalto", "Vendedor de pamonha"], clues: [
         "Disse que ia voltar pra cidade em forma de avião desenhada por Lúcio Costa.",
         "Perguntou se o Lago Paranoá tinha vista pra alguma mansão de R$ 6 milhões.",
         "Queria chegar a tempo de uma sessão no Congresso Nacional.",
         "Reclamou da umidade de 12% do Planalto Central.",
     ]},
-    City { name: "São Paulo", desc: "Maior cidade do país. Trânsito, garoa e banqueiros na Faria Lima.", clues: [
+    City { name: "São Paulo", desc: "Maior cidade do país. Trânsito, garoa e banqueiros na Faria Lima.",
+        people: ["Banqueiro da Faria Lima", "Pasteleiro da feira", "Motoboy"], clues: [
         "Falou que tinha reunião com banqueiros na Faria Lima.",
         "Perguntou onde ficava o MASP, na Avenida Paulista.",
         "Levou guarda-chuva por causa da garoa.",
         "Queria comer pastel de feira e ver um jogo no Morumbi.",
     ]},
-    City { name: "Rio de Janeiro", desc: "Cidade Maravilhosa. Cristo Redentor, praia e a velha ALERJ.", clues: [
+    City { name: "Rio de Janeiro", desc: "Cidade Maravilhosa. Cristo Redentor, praia e a velha ALERJ.",
+        people: ["Vendedor de mate na praia", "Ex-servidor da ALERJ", "Surfista do Arpoador"], clues: [
         "Comentou saudade dos tempos de deputado na ALERJ.",
         "Queria ver o Cristo Redentor de perto.",
         "Falou de uma loja de chocolates num shopping da Barra da Tijuca.",
         "Ia assistir a um jogo no Maracanã.",
     ]},
-    City { name: "Buenos Aires", desc: "Capital argentina. Tango, parrilla e Casa Rosada.", clues: [
+    City { name: "Buenos Aires", desc: "Capital argentina. Tango, parrilla e Casa Rosada.",
+        people: ["Dançarina de tango", "Parrillero de San Telmo", "Cambista do dólar blue"], clues: [
         "Trocou reais por pesos argentinos.",
         "Queria tirar foto no Obelisco da Avenida 9 de Julio.",
         "Perguntou o caminho para a Casa Rosada.",
         "Pediu doce de leite e uma aula de tango.",
     ]},
-    City { name: "Guayaquil", desc: "Maior cidade do Equador, porto no Pacífico. Calor e iguanas no parque.", clues: [
+    City { name: "Guayaquil", desc: "Maior cidade do Equador, porto no Pacífico. Calor e iguanas no parque.",
+        people: ["Vendedor de chapéu-panamá", "Guia do Malecón", "Atendente do aeroporto"], clues: [
         "Comemorou que lá usam dólar americano, mas se fala espanhol.",
         "Queria passear no Malecón 2000, à beira do rio Guayas.",
         "Perguntou se dava pra ver iguanas soltas num parque do centro.",
         "Disse que ia pra um país com nome de linha imaginária.",
     ]},
-    City { name: "Miami", desc: "Flórida. Praia, Little Havana e brasileiros comprando eletrônicos.", clues: [
+    City { name: "Miami", desc: "Flórida. Praia, Little Havana e brasileiros comprando eletrônicos.",
+        people: ["Salva-vidas de South Beach", "Barista de Little Havana", "Brasileiro com seis malas"], clues: [
         "Comprou óculos escuros pra ir a South Beach.",
         "Quis tomar um cafecito em Little Havana.",
         "Disse que ia pra Flórida, mas não pra ver o Mickey.",
         "Perguntou quanto tempo de carro até Mar-a-Lago, em Palm Beach.",
     ]},
-    City { name: "Orlando", desc: "Flórida central. Parques temáticos e filas intermináveis.", clues: [
+    City { name: "Orlando", desc: "Flórida central. Parques temáticos e filas intermináveis.",
+        people: ["Pessoa fantasiada de mascote", "Vendedor de ingressos", "Brasileira na fila da montanha-russa"], clues: [
         "Queria tirar foto com um camundongo famoso.",
         "Perguntou sobre ingressos para parques temáticos.",
         "Ia fazer compras nos outlets da Flórida, longe da praia.",
         "Disse que ia pra capital mundial das montanhas-russas.",
     ]},
-    City { name: "Washington", desc: "Capital dos EUA. Casa Branca, Capitólio e lobistas.", clues: [
+    City { name: "Washington", desc: "Capital dos EUA. Casa Branca, Capitólio e lobistas.",
+        people: ["Lobista da K Street", "Guarda do Capitólio", "Estagiário do Depto. de Estado"], clues: [
         "Tinha reunião marcada no Departamento de Estado.",
         "Queria ver a Casa Branca pessoalmente.",
         "Perguntou onde fica o Capitólio.",
         "Disse que ia pra uma cidade com um obelisco gigante e muitos lobistas.",
     ]},
-    City { name: "Jerusalém", desc: "Cidade sagrada para três religiões, em Israel.", clues: [
+    City { name: "Jerusalém", desc: "Cidade sagrada para três religiões, em Israel.",
+        people: ["Guia da Cidade Velha", "Vendedor de falafel", "Peregrino"], clues: [
         "Trocou dinheiro por shekels.",
         "Queria rezar no Muro das Lamentações.",
         "Disse que ia a um país com a Estrela de Davi na bandeira.",
         "Estava treinando o 'shalom'.",
     ]},
-    City { name: "Roma", desc: "Capital da Itália. Coliseu, Vaticano e burocracia consular.", clues: [
+    City { name: "Roma", desc: "Capital da Itália. Coliseu, Vaticano e burocracia consular.",
+        people: ["Atendente da cidadania italiana", "Gladiador de foto", "Guarda suíço"], clues: [
         "Mostrou orgulhoso o passaporte italiano.",
         "Queria ver o Coliseu.",
         "Perguntou se o Papa recebia visitas.",
         "Pagou em euro e pediu um espresso.",
     ]},
-    City { name: "Lisboa", desc: "Capital de Portugal. Pastel de nata, elétrico 28 e muitos brasileiros.", clues: [
+    City { name: "Lisboa", desc: "Capital de Portugal. Pastel de nata, elétrico 28 e muitos brasileiros.",
+        people: ["Motorneiro do elétrico 28", "Fadista de Alfama", "Pasteleiro de Belém"], clues: [
         "Queria comer pastel de Belém.",
         "Perguntou como pegar o elétrico 28.",
         "Disse que ia pra onde falam português 'com sotaque'.",
         "Ia ouvir fado em Alfama.",
     ]},
-    City { name: "Funchal", desc: "Ilha da Madeira, Portugal. Vinho, levadas e empresas offshore.", clues: [
+    City { name: "Funchal", desc: "Ilha da Madeira, Portugal. Vinho, levadas e empresas offshore.",
+        people: ["Contador de offshore", "Guia das levadas", "Produtor de vinho Madeira"], clues: [
         "Disse que ia pra uma ilha portuguesa no meio do Atlântico.",
         "Queria provar vinho Madeira.",
         "Perguntou pela terra natal do Cristiano Ronaldo.",
@@ -159,6 +172,11 @@ const WITNESSES: [&str; 8] = [
     "Taxista", "Garçom", "Assessor que nunca foi ao gabinete", "Vendedora de bombons",
     "Corretor de imóveis", "Influencer de viagens", "Piloto de jatinho", "Vizinho fofoqueiro",
 ];
+// índices 0..8 são genéricos; depois vêm os 3 locais de cada cidade, na ordem de CITIES
+fn witness_name(i: usize) -> &'static str {
+    if i < WITNESSES.len() { WITNESSES[i] } else { CITIES[(i - WITNESSES.len()) / 3].people[(i - WITNESSES.len()) % 3] }
+}
+
 const NOTHING: [&str; 4] = [
     "Senador? Aqui? Nunca vi.",
     "Não vi ninguém de terno fugindo por aqui, não.",
@@ -244,13 +262,12 @@ impl Game {
         self.prova_slot = self.rand(3);
         self.prova_taken = false;
         self.last_ask = None;
-        let mut w = [0; 3];
-        for i in 0..3 {
-            loop {
-                let x = self.rand(WITNESSES.len());
-                if !w[..i].contains(&x) { w[i] = x; break; }
-            }
-        }
+        // duas testemunhas locais + uma genérica, em posições sorteadas
+        let a = self.rand(3);
+        let b = (a + 1 + self.rand(2)) % 3;
+        let local = |k| WITNESSES.len() + city * 3 + k;
+        let mut w = [local(a), local(b), self.rand(WITNESSES.len())];
+        w.rotate_left(self.rand(3));
         self.witnesses = w;
     }
 
@@ -268,7 +285,7 @@ impl Game {
     fn ask(&mut self, slot: usize) {
         self.last_ask = Some(slot);
         self.hours -= H_ASK;
-        let who = WITNESSES[self.witnesses[slot]];
+        let who = witness_name(self.witnesses[slot]);
         if !self.on_trail() {
             self.msg = format!("{}: \"{}\"", who, NOTHING[self.rand(NOTHING.len())]);
         } else if self.step == self.last() {
@@ -353,7 +370,7 @@ impl Game {
             Screen::Dossie(_) => vec!["Voltar".into()],
             Screen::Brief => vec!["Começar a perseguição".into()],
             Screen::City => {
-                let mut o: Vec<String> = self.witnesses.iter().map(|&w| format!("Interrogar: {}", WITNESSES[w])).collect();
+                let mut o: Vec<String> = self.witnesses.iter().map(|&w| format!("Interrogar: {}", witness_name(w))).collect();
                 o.push("Viajar".into());
                 if !self.mandado { o.push(format!("Pedir mandado ao STF ({}h)", H_WARRANT)); }
                 o
@@ -507,6 +524,18 @@ mod tests {
         g.act(4);
         while g.screen != Screen::End { g.act(0); }
         assert!(g.end.contains("prazo"));
+    }
+
+    #[test]
+    fn witnesses_are_two_locals_and_one_generic() {
+        let mut g = Game::new(3);
+        for city in 0..CITIES.len() {
+            g.arrive(city);
+            let locals: Vec<_> = g.witnesses.iter().filter(|&&w| w >= WITNESSES.len()).collect();
+            assert_eq!(locals.len(), 2);
+            assert!(locals.iter().all(|&&w| (w - WITNESSES.len()) / 3 == city));
+            assert_ne!(locals[0], locals[1]);
+        }
     }
 
     #[test]
