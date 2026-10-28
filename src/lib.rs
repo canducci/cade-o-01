@@ -15,6 +15,19 @@ const BUE: usize = 3;
 const GYE: usize = 4;
 const MIA: usize = 5;
 
+// lon/lat de cada cidade, mesma ordem de CITIES (e de CITY_LL no index.html)
+const LL: [(f64, f64); 12] = [(-47.9, -15.8), (-46.6, -23.5), (-43.2, -22.9), (-58.4, -34.6), (-79.9, -2.2), (-80.2, 25.8),
+    (-81.4, 28.5), (-77.0, 38.9), (35.2, 31.8), (12.5, 41.9), (-9.1, 38.7), (-16.9, 32.7)];
+
+// horas de voo: 1h de embarque + 1h a cada 900 km (haversine)
+fn flight(a: usize, b: usize) -> i32 {
+    let ((l1, p1), (l2, p2)) = (LL[a], LL[b]);
+    let (p1, p2, dl) = (p1.to_radians(), p2.to_radians(), (l2 - l1).to_radians());
+    let h = ((p2 - p1) / 2.0).sin().powi(2) + p1.cos() * p2.cos() * (dl / 2.0).sin().powi(2);
+    let km = 6371.0 * 2.0 * h.sqrt().asin();
+    1 + (km / 900.0).round() as i32
+}
+
 const CITIES: &[City] = &[
     City { name: "Brasília", desc: "Capital federal. Ar seco, Esplanada dos Ministérios e muito foro privilegiado.",
         people: ["Lobista do Congresso", "Segurança do Planalto", "Vendedor de pamonha"], clues: [
@@ -208,19 +221,20 @@ const PROVAS: [&str; 6] = [
     "um recibo de bombons", "um áudio vazado", "uma planilha misteriosa",
 ];
 
-// carreira: casos resolvidos para chegar ao posto e prazo de cada caso nele
-// 64h é o piso: 5 cidades jogadas sem erro, interrogando todos, gastam 61h.
-struct Posto { need: u32, name: &'static str, abbr: &'static str, hours: i32 }
+// carreira: casos resolvidos para chegar ao posto e folga sobre a rota sem erro
+struct Posto { need: u32, name: &'static str, abbr: &'static str, slack: i32 }
 const RANKS: [Posto; 5] = [
-    Posto { need: 0, name: "Estagiário", abbr: "Estag.", hours: 80 },
-    Posto { need: 1, name: "Agente", abbr: "Ag.", hours: 76 },
-    Posto { need: 3, name: "Agente especial", abbr: "Ag. esp.", hours: 72 },
-    Posto { need: 6, name: "Delegado", abbr: "Del.", hours: 68 },
-    Posto { need: 10, name: "Delegado-chefe", abbr: "Del.-chefe", hours: 64 },
+    Posto { need: 0, name: "Estagiário", abbr: "Estag.", slack: 40 },
+    Posto { need: 1, name: "Agente", abbr: "Ag.", slack: 34 },
+    Posto { need: 3, name: "Agente especial", abbr: "Ag. esp.", slack: 28 },
+    Posto { need: 6, name: "Delegado", abbr: "Del.", slack: 22 },
+    Posto { need: 10, name: "Delegado-chefe", abbr: "Del.-chefe", slack: 16 },
 ];
 fn rank(solved: u32) -> usize { RANKS.iter().rposition(|r| solved >= r.need).unwrap() }
 const H_ASK: i32 = 2;
-const H_TRAVEL: i32 = 8;
+// depois de cada viagem, 1 em EVENT_ODDS chances de um evento (atraso, habeas corpus, vazamento)
+const EVENT_ODDS: usize = 5;
+const H_DELAY: i32 = 4;
 const H_WARRANT: i32 = 3;
 const NEED: u32 = 2;
 // Modo difícil: 1 em ARCHIVE_ODDS viagens termina em arquivamento.
@@ -254,7 +268,7 @@ impl Game {
     pub fn new(seed: u32, solved: u32) -> Game {
         Game {
             rng: seed as u64 | 1, screen: Screen::Title, case: 0, route: vec![], step: 0, here: 0,
-            hours: RANKS[rank(solved)].hours, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false, hard: false, solved,
+            hours: 0, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false, hard: false, solved,
             witnesses: [0, 1, 2], dests: vec![], msg: String::new(), end: String::new(),
         }
     }
@@ -267,7 +281,11 @@ impl Game {
     }
 
     fn posto(&self) -> &'static Posto { &RANKS[rank(self.solved)] }
-    fn deadline(&self) -> i32 { self.posto().hours }
+    // prazo = rota sem erro (voos + 3 interrogatórios por cidade + mandado) + folga do posto
+    fn deadline(&self) -> i32 {
+        let flights: i32 = self.route.windows(2).map(|w| flight(w[0], w[1])).sum();
+        flights + self.route.len() as i32 * 3 * H_ASK + H_WARRANT + self.posto().slack
+    }
 
     fn last(&self) -> usize { self.route.len() - 1 }
     fn on_trail(&self) -> bool { self.here == self.route[self.step] }
@@ -370,7 +388,7 @@ impl Game {
     }
 
     fn travel(&mut self, dest: usize) {
-        self.hours -= H_TRAVEL;
+        self.hours -= flight(self.here, dest);
         if self.hard && self.rand(ARCHIVE_ODDS) == 0 {
             self.finish("📁 O relator, terrivelmente evangélico, pediu vista, orou sobre o processo e arquivou o caso.\nO 01 agradece a Deus nas redes.\n\n❌ CASO ARQUIVADO.".into());
             return;
@@ -384,8 +402,19 @@ impl Game {
         } else {
             "✈️ Você desembarca e procura testemunhas.".into()
         };
+        if self.rand(EVENT_ODDS) == 0 { self.event(); }
         self.screen = Screen::City;
         self.check_time();
+    }
+
+    fn event(&mut self) {
+        // habeas corpus só faz sentido com mandado na mão; sem ele, sorteia entre os outros dois
+        let e = if self.mandado { self.rand(3) } else { self.rand(2) * 2 };
+        self.msg += match e {
+            0 => { self.hours -= H_DELAY; "\n🕓 Voo atrasado: a companhia aérea pede desculpas pelas 4h perdidas." }
+            1 => { self.mandado = false; "\n⚖️ Habeas corpus surpresa: o mandado caiu. Peça outro ao STF." }
+            _ => { self.provas += 1; "\n📰 Vazamento à imprensa: uma reportagem entrega o que faltava. (+1 prova)" }
+        };
     }
 
     fn warrant(&mut self) {
@@ -422,7 +451,7 @@ impl Game {
                 if !self.mandado { o.push(format!("Pedir mandado ao STF ({}h)", H_WARRANT)); }
                 o
             }
-            Screen::Travel => self.dests.iter().map(|&d| CITIES[d].name.to_string()).chain(["Ficar aqui".to_string()]).collect(),
+            Screen::Travel => self.dests.iter().map(|&d| format!("{} ({}h)", CITIES[d].name, flight(self.here, d))).chain(["Ficar aqui".to_string()]).collect(),
             Screen::End => vec!["Ver dossiê do caso".into(), "Novo caso".into(), "Menu".into()],
         }
     }
@@ -502,8 +531,8 @@ Você é agente da Divisão de Fugas Improváveis. Siga as pistas, junte provas,
             Screen::DossieList => "DOSSIÊS\nO que dizem as investigações e reportagens (status em 28/10/2026).".into(),
             Screen::Dossie(i) => CASES[i].dossie.into(),
             Screen::Brief => format!("CASO: {}\n\n{}\n\nPonto de partida: {}. Posto: {}. Você tem {}h.\n\
-Interrogar: {}h · Viajar: {}h · Mandado: {}h, com {} provas, antes de alcançar o 01.{}",
-                CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, self.posto().name, self.hours, H_ASK, H_TRAVEL, H_WARRANT, NEED,
+Interrogar: {}h · Viajar: 1h a 15h, pela distância · Mandado: {}h, com {} provas, antes de alcançar o 01.{}",
+                CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, self.posto().name, self.hours, H_ASK, H_WARRANT, NEED,
                 if self.hard { format!("\n\n⛪ Modo difícil: 1 em {} viagens arquiva o caso, e metade das provas tende a ser anulada.", ARCHIVE_ODDS) } else { " Algumas provas podem ser anuladas.".into() }),
             Screen::City => format!("{}{}\n\n{}", self.header(), CITIES[self.here].desc, self.msg),
             Screen::Travel => format!("{}Para onde?", self.header()),
@@ -594,10 +623,13 @@ mod tests {
 
     #[test]
     fn rank_sets_deadline() {
-        let brief = |solved| { let mut g = Game::new(1, solved); g.act(0); g.render() };
-        assert!(brief(0).contains("Estagiário") && brief(0).contains("Você tem 80h"), "{}", brief(0));
+        let game = |solved| { let mut g = Game::new(1, solved); g.act(0); g };
+        let brief = |solved| game(solved).render();
+        let (low, top) = (game(0).deadline(), game(10).deadline());
+        assert_eq!(low - top, 40 - 16);
+        assert!(brief(0).contains("Estagiário") && brief(0).contains(&format!("Você tem {}h", low)), "{}", brief(0));
         assert!(brief(9).contains("Delegado,") || brief(9).contains("Delegado."), "{}", brief(9));
-        assert!(brief(10).contains("Delegado-chefe") && brief(10).contains("Você tem 64h"), "{}", brief(10));
+        assert!(brief(10).contains("Delegado-chefe") && brief(10).contains(&format!("Você tem {}h", top)), "{}", brief(10));
         assert!(brief(u32::MAX).contains("Delegado-chefe"));
         let title = Game::new(1, 2).render();
         assert!(title.contains("Agente · 2 casos resolvidos (falta 1 para Agente especial)"), "{}", title);
@@ -680,5 +712,37 @@ mod tests {
     fn fixed_route_for_passport_case() {
         let g = (1..).map(begin).find(|g| g.case == 7).unwrap();
         assert_eq!(g.route, vec![BSB, BUE, GYE, MIA]);
+        // voos 4h + 6h + 4h, 4 cidades x 3 interrogatórios x 2h, mandado 3h, folga do Estagiário 40h
+        assert_eq!(g.deadline(), 14 + 24 + 3 + 40);
+        assert_eq!(g.hours, g.deadline());
+    }
+
+    #[test]
+    fn flight_hours_follow_distance() {
+        assert_eq!(flight(SP, RIO), 1);
+        assert_eq!(flight(BSB, MIA), 7);
+        assert_eq!(flight(BUE, 8), 15); // Jerusalém
+        assert_eq!(flight(RIO, SP), flight(SP, RIO));
+        let mut g = begin(5);
+        g.act(3);
+        let d = g.dests[0];
+        assert!(g.options()[0].ends_with(&format!(" ({}h)", flight(g.here, d))));
+    }
+
+    #[test]
+    fn events_have_effects() {
+        let mut seen = [false; 3];
+        for seed in 1..200 {
+            for mandado in [false, true] {
+                let mut g = begin(seed);
+                g.mandado = mandado;
+                let (h, p) = (g.hours, g.provas);
+                g.event();
+                if g.msg.contains("atrasado") { seen[0] = true; assert_eq!(g.hours, h - H_DELAY); }
+                else if g.msg.contains("Habeas") { seen[1] = true; assert!(mandado && !g.mandado); }
+                else { seen[2] = true; assert!(g.msg.contains("Vazamento")); assert_eq!(g.provas, p + 1); }
+            }
+        }
+        assert_eq!(seen, [true; 3]);
     }
 }

@@ -7,9 +7,11 @@ w.start(42, 0);
 if (!read().includes('PARÓDIA')) throw new Error('tela inicial');
 w.act(0); w.act(0);
 const s = read();
-if (!s.includes('⏳ 80h') || !s.includes('> Viajar')) throw new Error(s);
+if (!/⏳ \d+h/.test(s) || !s.includes('> Viajar')) throw new Error(s);
 w.act(0);
-if (!/^@city \d+ \d+ \d+ \d+ 1 1 78 80\n/.test(read())) throw new Error('linha de cena: ' + read().split('\n')[0]);
+// interrogar custa 2h: horas = prazo - 2
+const m = read().match(/^@city \d+ \d+ \d+ \d+ 1 1 (\d+) (\d+)\n/);
+if (!m || +m[1] !== m[2] - 2) throw new Error('linha de cena: ' + read().split('\n')[0]);
 console.log(read());
 // carreira: o total entra no início e volta na linha de cena de fim
 w.start(42, 7);
