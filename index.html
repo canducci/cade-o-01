@@ -5,14 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cadê o 01?</title>
 <style>
-  body { background: #000; color: #ffff55; font: 18px/1.5 "Courier New", monospace; max-width: 760px; margin: .8em auto; padding: 0 1em; }
-  #art { display: block; box-sizing: border-box; width: 100%; aspect-ratio: 16 / 9; border: 4px solid #aaaaaa; border-bottom: 0; background: #0000aa; shape-rendering: crispEdges; }
-  #text { white-space: pre-wrap; border: 4px solid #aaaaaa; padding: 1em; background: #0000aa; min-height: 6em; cursor: pointer; }
+  /* VT323 (SIL OFL, ver OFL-VT323.txt), só latim */
+  @font-face { font-family: VT323; src: url(vt323.woff2) format('woff2'); font-display: swap; }
+  body { background: #000; color: #ffff55; font: 22px/1.3 VT323, "Courier New", monospace; max-width: 760px; margin: .8em auto; padding: 0 1em; }
+  /* moldura em relevo e efeito de tubo: linhas de varredura e cantos escuros, por cima da arte */
+  #screen { position: relative; border: 4px solid; border-color: #fff #555 #555 #fff; border-bottom: 0; }
+  #screen::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(rgba(0, 0, 0, .2) 0 1px, transparent 1px 3px), radial-gradient(ellipse, transparent 60%, rgba(0, 0, 0, .4)); }
+  #art { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0000aa; shape-rendering: crispEdges; }
+  #text { white-space: pre-wrap; border: 6px double #aaaaaa; padding: .8em 1em; background: #0000aa; min-height: 6em; cursor: pointer; }
   #opts { display: grid; grid-template-columns: 1fr 1fr; gap: .4em; margin-top: .4em; }
-  @media (max-width: 600px) { body { font-size: 16px; } #opts { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { body { font-size: 20px; } #opts { grid-template-columns: 1fr; } }
   /* alvo de toque de pelo menos 44px */
-  #opts button, #opts a { display: block; box-sizing: border-box; width: 100%; min-height: 44px; padding: .5em .6em; text-align: left; font: inherit; font-size: 16px; color: #000; background: #55ffff; border: 0; cursor: pointer; text-decoration: none; }
+  #opts button, #opts a { display: block; box-sizing: border-box; width: 100%; min-height: 44px; padding: .5em .6em; text-align: left; font: inherit; font-size: 21px; line-height: 1.1; color: #000; background: #55ffff; border: 0; cursor: pointer; text-decoration: none;
+    box-shadow: inset 3px 3px 0 #fff, inset -3px -3px 0 #00aaaa; }
   #opts button:hover, #opts button:focus, #opts a:hover, #opts a:focus { background: #fff; }
+  #opts button:active, #opts a:active { box-shadow: inset 3px 3px 0 #00aaaa, inset -3px -3px 0 #fff; }
   #opts button:disabled { opacity: .4; }
   .cloud { animation: drift linear infinite; }
   @keyframes drift { from { transform: translateX(-60px); } to { transform: translateX(200px); } }
@@ -28,7 +36,7 @@
   .run { animation: run 3s linear forwards; }
   @keyframes run { from { transform: translateX(170px); } to { transform: translateX(-30px); } }
   /* longe das opções e sem atalho numérico, para não abandonar sem querer */
-  #quit { display: block; min-height: 44px; margin: 2em 0 0 auto; padding: .5em .8em; font: inherit; font-size: 15px; color: #ff5555; background: none; border: 2px solid #ff5555; cursor: pointer; }
+  #quit { display: block; min-height: 44px; margin: 2em 0 0 auto; padding: .5em .8em; font: inherit; font-size: 20px; color: #ff5555; background: none; border: 2px solid #ff5555; cursor: pointer; }
   #quit[hidden] { display: none; }
   #snd { position: fixed; top: .2em; right: .2em; width: 44px; height: 44px; font-size: 20px; background: none; border: 0; cursor: pointer; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -38,7 +46,7 @@
 </head>
 <body>
 <button id="snd" title="Som (tecla S)" aria-label="Ligar ou desligar o som">🔊</button>
-<svg id="art" viewBox="0 0 160 90" role="img" aria-label="Carregando"></svg>
+<div id="screen"><svg id="art" viewBox="0 0 160 90" role="img" aria-label="Carregando"></svg></div>
 <div id="text" aria-hidden="true">Carregando…</div>
 <div id="sr" class="sr" aria-live="polite"></div>
 <div id="opts"></div>
@@ -51,7 +59,7 @@ const R = (x, y, w, h, c, a = '') => `<rect x="${x}" y="${y}" width="${w}" heigh
 const P = (pts, c, a = '') => `<polygon points="${pts}" fill="${c}" ${a}/>`;
 const C = (x, y, r, c, a = '') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" ${a}/>`;
 const D = (d, c, a = '') => `<path d="${d}" fill="${c}" ${a}/>`;
-const T = (x, y, s, c, txt, a = '') => `<text x="${x}" y="${y}" font-size="${s}" fill="${c}" font-family="monospace" ${a}>${txt}</text>`;
+const T = (x, y, s, c, txt, a = '') => `<text x="${x}" y="${y}" font-size="${s}" fill="${c}" font-family="VT323, monospace" ${a}>${txt}</text>`;
 // sprites: grade de texto, 1 letra = 1 pixel de 2x2 unidades; '.' é transparente
 const PAL = { k: K.blk, b: K.blu, g: K.grn, c: K.cya, r: K.red, m: K.mag, n: K.brn, a: K.gry, d: K.dgr, B: K.lbl,
   G: K.lgn, C: K.lcy, R: K.lrd, M: K.lmg, y: K.yel, w: K.wht, p: '#ffaa77' };
@@ -425,21 +433,22 @@ async function card(share) {
   img.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(art).replace('<svg', '<svg shape-rendering="crispEdges"')], {type: 'image/svg+xml'}));
   await img.decode();
   URL.revokeObjectURL(img.src);
+  await document.fonts.load('72px VT323'); // o canvas não espera a fonte sozinho
   const c = document.createElement('canvas'), g = c.getContext('2d');
   c.width = 1080; c.height = 1920;
   g.fillStyle = '#000'; g.fillRect(0, 0, 1080, 1920);
   g.textAlign = 'center';
-  g.fillStyle = '#ffff55'; g.font = 'bold 110px "Courier New", monospace';
+  g.fillStyle = '#ffff55'; g.font = '150px VT323, monospace';
   g.fillText('CADÊ O 01?', 540, 400);
   g.drawImage(img, 0, 520, 1080, 608);
-  g.font = '56px "Courier New", monospace';
+  g.font = '72px VT323, monospace';
   let y = 1280, row = '';
   for (const word of line.split(' ')) {
     if (row && g.measureText(row + ' ' + word).width > 960) { g.fillText(row, 540, y); y += 80; row = word; }
     else row = row ? row + ' ' + word : word;
   }
   g.fillText(row, 540, y);
-  g.fillStyle = '#55ffff'; g.font = '44px "Courier New", monospace';
+  g.fillStyle = '#55ffff'; g.font = '56px VT323, monospace';
   g.fillText(url.replace('https://', ''), 540, 1780);
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
@@ -503,6 +512,7 @@ function choose(i) {
   show();
 }
 
+let lastScene;
 function show() {
   const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
   const [kind, ...args] = lines[0].slice(1).split(' ');
@@ -546,6 +556,9 @@ function show() {
     opts.replaceChildren(...buttons);
     quit.hidden = !['brief', 'city', 'travel'].includes(kind);
     draw(kind, a);
+    // troca de cena (não a cada fala) entra com um fade em degraus, estilo paleta de DOS
+    if (kind + a[0] !== lastScene && !matchMedia('(prefers-reduced-motion: reduce)').matches) art.animate({ opacity: [0, 1] }, { duration: 320, easing: 'steps(4)' });
+    lastScene = kind + a[0];
     buttons.forEach(b => b.prep?.());
     art.setAttribute('aria-label', describe(kind, a));
     sr.textContent = body;
