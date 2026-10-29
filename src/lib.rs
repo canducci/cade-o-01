@@ -299,6 +299,21 @@ fn hello(i: usize) -> String {
     if i < WITNESSES.len() { String::new() } else { format!("{} ", HELLO[i - WITNESSES.len()]) }
 }
 
+// países por cidade, mesma ordem de CITIES
+const COUNTRY: [usize; 12] = [0, 0, 0, 1, 2, 3, 3, 3, 4, 5, 6, 6];
+// chance (%) de uma testemunha ser apoiadora do fugitivo, por posto: Estagiário nunca
+const SUPPORT_PCT: [usize; 5] = [0, 10, 20, 30, 40];
+const SUPPORT: [&str; 8] = [
+    "Isso é perseguição política, e eu não falo com quem persegue!",
+    "Eu apoio o senador de todo o coração. Não vi nada, não sei de nada.",
+    "Perseguição! Fugiu coisa nenhuma, foi viajar com a família.",
+    "E o Lula, hein? Quero ver investigarem ele também!",
+    "E o PT, hein? Isso aí ninguém investiga, né?",
+    "E o Lula, hein? Com o que ele fez, vocês vêm atrás do 01?",
+    "E o PT, hein? Aí o inquérito nunca anda!",
+    "Ele é um perseguido político. Pergunta pro Lula onde estão os passaportes dele!",
+];
+
 const NOTHING: [&str; 4] = [
     "Senador? Aqui? Nunca vi.",
     "Não vi ninguém de terno fugindo por aqui, não.",
@@ -383,6 +398,8 @@ pub struct Game {
     hard: bool,
     solved: u32,
     witnesses: [usize; 3],
+    supporter: Option<usize>,
+    support_seen: Vec<usize>, // países que já tiveram apoiador neste caso
     dests: Vec<usize>,
     msg: String,
     end: String,
@@ -393,7 +410,7 @@ impl Game {
         Game {
             rng: seed as u64 | 1, screen: Screen::Title, case: 0, route: vec![], step: 0, here: 0,
             hours: 0, provas: 0, prova_slot: 0, prova_taken: false, last_ask: None, mandado: false, hard: false, solved,
-            witnesses: [0, 1, 2], dests: vec![], msg: String::new(), end: String::new(),
+            witnesses: [0, 1, 2], supporter: None, support_seen: vec![], dests: vec![], msg: String::new(), end: String::new(),
         }
     }
 
@@ -433,6 +450,7 @@ impl Game {
         self.hours = self.deadline();
         self.provas = 0;
         self.mandado = false;
+        self.support_seen.clear();
         self.msg.clear();
         self.arrive(self.route[0]);
         self.screen = Screen::Brief;
@@ -440,7 +458,6 @@ impl Game {
 
     fn arrive(&mut self, city: usize) {
         self.here = city;
-        self.prova_slot = self.rand(3);
         self.prova_taken = false;
         self.last_ask = None;
         // duas testemunhas locais + uma genérica, em posições sorteadas
@@ -450,6 +467,17 @@ impl Game {
         let mut w = [local(a), local(b), self.rand(WITNESSES.len())];
         w.rotate_left(self.rand(3));
         self.witnesses = w;
+        // no máximo 1 apoiador por país (por caso), com chance crescente conforme o posto
+        self.supporter = None;
+        let country = COUNTRY[city];
+        if !self.support_seen.contains(&country) && self.rand(100) < SUPPORT_PCT[rank(self.solved)] {
+            self.supporter = Some(self.rand(3));
+            self.support_seen.push(country);
+        }
+        self.prova_slot = match self.supporter {
+            Some(slot) => (slot + 1 + self.rand(2)) % 3,
+            None => self.rand(3),
+        };
     }
 
     fn finish(&mut self, text: String) {
@@ -471,7 +499,9 @@ impl Game {
         self.hours -= H_ASK;
         let who = witness_name(self.witnesses[slot]);
         let hi = hello(self.witnesses[slot]);
-        if !self.on_trail() {
+        if self.supporter == Some(slot) {
+            self.msg = format!("\" {}: \"{}{}\"", who, hi, SUPPORT[self.rand(SUPPORT.len())]);
+        } else if !self.on_trail() {
             self.msg = format!("\" {}: \"{}{}\"", who, hi, NOTHING[self.rand(NOTHING.len())]);
         } else if self.step == self.last() {
             let city = CITIES[self.here].name;
@@ -764,7 +794,10 @@ mod tests {
         }
         if g.screen == Screen::End { return g; } // arquivado no caminho
         g.act(4); // mandado
-        g.act(0); // confronto
+        for s in 0..3 {
+            g.act(s); // confronta com a primeira testemunha que não seja apoiadora
+            if g.screen == Screen::End { break; }
+        }
         assert_eq!(g.screen, Screen::End);
         g
     }
@@ -862,6 +895,19 @@ mod tests {
     }
 
     #[test]
+    fn proof_is_never_assigned_to_a_supporter() {
+        for seed in 1..100 {
+            let mut g = Game::new(seed, 10);
+            for city in 0..CITIES.len() {
+                g.support_seen.clear();
+                g.arrive(city);
+                assert_ne!(g.supporter, Some(g.prova_slot));
+                assert!((0..3).any(|slot| Some(slot) != g.supporter));
+            }
+        }
+    }
+
+    #[test]
     fn fixed_route_for_passport_case() {
         let g = (1..).map(begin).find(|g| g.case == 7).unwrap();
         assert_eq!(g.route, vec![BSB, BUE, GYE, MIA]);
@@ -911,7 +957,8 @@ mod tests {
         for seed in 1..50 {
             for solved in [0, 6] {
                 let mut g = begin_at(seed, 0, solved);
-                g.act(0);
+                let witness = (0..3).find(|&slot| g.supporter != Some(slot)).unwrap();
+                g.act(witness);
                 let next = &CITIES[g.route[1]];
                 assert_eq!(solved == 6, next.vague.iter().any(|v| g.msg.contains(v)), "{}", g.msg);
                 g.act(3);
