@@ -135,7 +135,9 @@ const WITNESS = [person('y', 'w', 'd'), person('k', 'w', 'k'), person('n', 'd', 
   person('a', 'w', 'n', 'p', 'hat'), person('k', 'g', 'd', 'n'), person('a', 'n', 'n', 'p', 'chef'), // Jerusalém
   person('k', 'b', 'd'), person('R', 'y', 'n', 'p', 'plume'), person('R', 'y', 'b', 'p', 'plume'), // Roma
   person('k', 'y', 'd', 'p', 'cap'), person('k', 'd', 'k'), person('w', 'w', 'd', 'p', 'chef'), // Lisboa
-  person('a', 'd', 'd', 'p', 'bald'), person('n', 'G', 'n', 'p', 'hat'), person('a', 'm', 'n')]; // Funchal
+  person('a', 'd', 'd', 'p', 'bald'), person('n', 'G', 'n', 'p', 'hat'), person('a', 'm', 'n'), // Funchal
+  person('a', 'C', 'C', 'p', 'bald'), person('y', 'R', 'g'), person('k', 'g', 'd', 'p', 'cap'), // Budapeste
+  person('k', 'w', 'b', 'n'), person('n', 'R', 'b', 'n', 'cap'), person('k', 'w', 'k', 'n', 'hat')]; // Assunção
 // acessório na mão direita de cada testemunha, mesma ordem de WITNESS
 const PROP = {
   taxi: ['kyk', 'yyy'], tray: ['wyw', 'aaa'], folder: ['yy', 'yy'], choc: ['MMM', 'nnn'], sign: ['RRR', 'RwR', '.a.', '.a.', '.a.'],
@@ -146,11 +148,13 @@ const PROP = {
   balloon: ['R', 'R', 'a', 'a'], ticket: ['yy', 'yy'], shop: ['M.M', 'MMM', 'MMM'], papers: ['ww', 'ww', 'ww'], pita: ['nn', 'yy'],
   staff: ['n', 'n', 'n', 'n', 'n', 'n'], passport: ['rr', 'ry'], shield: ['yRy', 'RRR', '.R.'], spear: ['a', 'a', 'n', 'n', 'n', 'n'],
   bell: ['y', 'y'], guitar: ['.n', '.n', 'nn', 'nn'], nata: ['.n.', 'nyn'], calc: ['aa', 'kk', 'aa'], wine: ['.g', 'gg', 'gg'],
+  chess: ['kw', 'wk'], paprika: ['.g', 'RR', 'RR', '.R'], chipa: ['.y.', 'y.y', '.y.'], harp: ['n..', 'nn.', 'nan', 'nnn'],
 };
 const ACC = ['taxi', 'tray', 'folder', 'choc', 'sign', 'phone', 'roll', 'bino',
   'case', 'radio', 'corn', 'money', 'pastel', 'box', 'tank', 'folder', 'board', 'rose', 'spit', 'bills',
   'hats', 'flag', 'clip', 'buoy', 'cup', 'bags', 'balloon', 'ticket', 'shop', 'case', 'radio', 'papers',
-  'flag', 'pita', 'staff', 'passport', 'shield', 'spear', 'bell', 'guitar', 'nata', 'calc', 'staff', 'wine'];
+  'flag', 'pita', 'staff', 'passport', 'shield', 'spear', 'bell', 'guitar', 'nata', 'calc', 'staff', 'wine',
+  'chess', 'paprika', 'flag', 'chipa', 'bags', 'harp'];
 // protagonistas em resolução VGA: 32x52 em pixel de meia unidade (mesmo tamanho na tela), de boné
 // H boné e J sua sombra, S/s roupa, L/l calça, q sombra da pele
 const BIG = ['..........HHHHHHHHHH............', '........HHHHHHHHHHHHJJ..........', '.......HHHHHHHHHHHHHHJJ.........',
@@ -385,6 +389,28 @@ const CITY = [
     }).join('') +
     grad(62, 70, 'blu', 'lbl') + anim('bob', ship(84, 69)) +
     R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht') + palm(52, 74, 20),
+  // Budapeste: Parlamento neogótico de cúpula vermelha e pináculos, colina de Buda ao fundo e o Danúbio
+  () => DITHER + grad(0, 56, 'blu', 'lbl', 'lcy') + anim('bob', disc(22, 12, 5, 'yel')) + birds(18, 30) +
+    shape(146, 30, 56, t => 26 * round(t), 'grn', 'dgr') + R(138, 26, 12, 6, K.gry) + R(140, 22, 3, 4, K.gry) +
+    R(28, 40, 104, 16, K.wht) + R(128, 40, 4, 16, K.gry) + R(28, 38, 104, 2, K.lrd) +
+    [44, 50].map(y => Array.from({ length: 25 }, (_, i) => arch(30 + i * 4, y, 2, 4, 'dgr')).join('')).join('') +
+    [34, 50, 106, 122].map(x => R(x, 30, 4, 8, K.wht) + R(x + 3, 30, 1, 8, K.gry) + shape(x + 2, 20, 30, t => 2 * t, 'lrd', 'red')).join('') +
+    R(68, 30, 24, 8, K.wht) + Array.from({ length: 6 }, (_, i) => R(70 + i * 4, 31, 1, 7, K.gry)).join('') +
+    shaded(80, 16, 30, t => 11 * round(t), 'lrd', 'red') + R(79.5, 8, 1, 8, K.lrd) +
+    grad(56, 70, 'blu', 'lbl') + R(28, 56, 104, 3, 'url(#d-wht)') +
+    anim('bob', R(10, 62, 16, 1, K.wht) + R(120, 64, 18, 1, K.wht) + R(56, 63, 20, 3, K.wht) + R(58, 66, 16, 1, K.blu) + R(60, 61, 8, 2, K.lrd)) +
+    R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht') + R(0, 69, 160, 1, K.dgr),
+  // Assunção: Palacio de los López branco à beira do rio Paraguai, lapachos rosa e um colectivo passando
+  () => DITHER + grad(0, 50, 'lbl', 'lcy', 'wht') + anim('bob', disc(30, 12, 6, 'yel')) +
+    R(0, 48, 160, 2, K.grn) + grad(50, 58, 'blu', 'lbl') + anim('bob', R(14, 54, 14, 1, K.wht) + R(124, 53, 16, 1, K.wht)) +
+    R(50, 38, 60, 22, K.wht) + R(106, 38, 4, 22, K.gry) + R(48, 36, 64, 2, K.gry) +
+    [42, 51].map(y => Array.from({ length: 9 }, (_, i) => arch(53 + i * 6, y, 3, 6, 'dgr')).join('')).join('') +
+    R(74, 22, 12, 14, K.wht) + R(84, 22, 2, 14, K.gry) + R(73, 20, 14, 2, K.gry) + arch(78, 26, 4, 6, 'dgr') +
+    R(76, 14, 8, 6, K.wht) + R(82, 14, 2, 6, K.gry) + shape(80, 8, 14, t => 4 * t, 'gry', 'dgr') +
+    R(116, 26, 1, 34, K.dgr) + R(117, 26, 8, 2, K.red) + R(117, 28, 8, 2, K.wht) + R(117, 30, 8, 2, K.blu) +
+    crown(24, 62, 8, 'lmg', 'wht') + crown(136, 62, 7, 'lmg', 'wht') + crown(150, 62, 5, 'mag', 'lmg') +
+    R(0, 60, 160, 10, K.grn) + dith(0, 60, 160, 2, 'grn', 'lgn') +
+    R(0, 70, 160, 20, K.dgr) + R(0, 70, 160, 1, K.gry) + lanes(80) + drive(CAR, 72, 10),
 ];
 
 // testemunhas na frente da cena; quem acabou de falar fica com a boca mexendo (a fala vai no #balloon)
@@ -402,8 +428,8 @@ const witnesses = (ws, talk) => ws.map((w, i) => {
 
 // --- mapa: continentes grosseiros em lon/lat (equiretangular) ---
 const CITY_LL = [[-47.9, -15.8], [-46.6, -23.5], [-43.2, -22.9], [-58.4, -34.6], [-79.9, -2.2], [-80.2, 25.8],
-  [-81.4, 28.5], [-77.0, 38.9], [35.2, 31.8], [12.5, 41.9], [-9.1, 38.7], [-16.9, 32.7]];
-const CITY_NAME = ['Brasília', 'São Paulo', 'Rio', 'Buenos Aires', 'Guayaquil', 'Miami', 'Orlando', 'Washington', 'Jerusalém', 'Roma', 'Lisboa', 'Funchal'];
+  [-81.4, 28.5], [-77.0, 38.9], [35.2, 31.8], [12.5, 41.9], [-9.1, 38.7], [-16.9, 32.7], [19.0, 47.5], [-57.6, -25.3]];
+const CITY_NAME = ['Brasília', 'São Paulo', 'Rio', 'Buenos Aires', 'Guayaquil', 'Miami', 'Orlando', 'Washington', 'Jerusalém', 'Roma', 'Lisboa', 'Funchal', 'Budapeste', 'Assunção'];
 const LAND = [
   [-80, 10, -75, 11, -62, 11, -50, 2, -35, -5, -39, -15, -41, -22, -48, -26, -53, -34, -58, -38, -65, -42, -68, -55, -73, -50, -72, -35, -71, -18, -77, -12, -81, -5, -80, 1],
   [-100, 55, -60, 55, -60, 47, -66, 44, -70, 41, -76, 35, -81, 31, -80, 25, -83, 29, -90, 30, -97, 27, -97, 20, -90, 21, -87, 15, -83, 9, -78, 8, -83, 12, -92, 15, -100, 17],
@@ -418,7 +444,7 @@ const map = () => R(0, 0, 160, 90, K.blu) +
   [20, 40, 60, 80, 100, 120, 140].map(x => R(x, 0, .3, 90, K.lbl)).join('') + [15, 30, 45, 60, 75].map(y => R(0, y, 160, .3, K.lbl)).join('') +
   LAND.map(a => P(a.map((v, i) => i % 2 ? my(v) : mx(v)).join(' '), K.grn)).join('');
 // lado do rótulo por cidade (direita, esquerda, acima, abaixo) para não encavalar vizinhas
-const SIDE = 'rlrrrdurlrul';
+const SIDE = 'rdrrrdurlrulul';
 const LBL = { r: [2.5, 1.5, 'start'], l: [-2.5, 1.5, 'end'], u: [0, -2.5, 'middle'], d: [0, 5.5, 'middle'] };
 const dot = (c, color, label = '', a = '') => {
   const [x, y] = xy(c), [dx, dy, anchor] = LBL[SIDE[c]];
@@ -546,7 +572,7 @@ function fly(from, to, ms, done) {
 
 let titleRun = 0;
 function titleLoop(from = 0) {
-  const run = ++titleRun, to = (from + 1 + Math.floor(Math.random() * 11)) % 12;
+  const run = ++titleRun, to = (from + 1 + Math.floor(Math.random() * (CITY_LL.length - 1))) % CITY_LL.length;
   fly(from, to, 2200, () => { if (run === titleRun && scene0 === 'title') titleLoop(to); });
 }
 

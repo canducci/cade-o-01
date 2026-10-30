@@ -18,8 +18,8 @@ const GYE: usize = 4;
 const MIA: usize = 5;
 
 // lon/lat de cada cidade, mesma ordem de CITIES (e de CITY_LL no index.html)
-const LL: [(f64, f64); 12] = [(-47.9, -15.8), (-46.6, -23.5), (-43.2, -22.9), (-58.4, -34.6), (-79.9, -2.2), (-80.2, 25.8),
-    (-81.4, 28.5), (-77.0, 38.9), (35.2, 31.8), (12.5, 41.9), (-9.1, 38.7), (-16.9, 32.7)];
+const LL: [(f64, f64); 14] = [(-47.9, -15.8), (-46.6, -23.5), (-43.2, -22.9), (-58.4, -34.6), (-79.9, -2.2), (-80.2, 25.8),
+    (-81.4, 28.5), (-77.0, 38.9), (35.2, 31.8), (12.5, 41.9), (-9.1, 38.7), (-16.9, 32.7), (19.0, 47.5), (-57.6, -25.3)];
 
 // horas de voo: 1h de embarque + 1h a cada 900 km (haversine)
 fn flight(a: usize, b: usize) -> i32 {
@@ -92,7 +92,7 @@ const CITIES: &[City] = &[
         "Disse que ia pra onde o dólar tem cor.",
         "Perguntou se os vizinhos ainda falam de Maradona em cada esquina.",
         "Queria jantar um bife de chorizo bem tarde, depois das onze.",
-        "Disse que ia pra onde chamam ônibus de 'colectivo'.",
+        "Disse que ia pra onde tem alfajor de doce de leite em cada quiosque.",
     ], subtle: [
         "Disse que ia pra cidade dos labirintos de Borges.",
         "Queria ver a sacada de onde Evita discursava.",
@@ -210,7 +210,7 @@ const CITIES: &[City] = &[
     ], vague: [
         "Disse que ia pra terra do bacalhau, mas na capital.",
         "Queria ver a ponte vermelha sobre o Tejo.",
-        "Disse que ia pra uma capital de bondinhos amarelos e ladeiras.",
+        "Disse que ia pra uma capital de bondinhos amarelos, ladeiras e azulejos.",
         "Queria ouvir uma canção triste numa taberna antiga.",
     ], subtle: [
         "Disse que ia pra cidade que um marquês reconstruiu depois do terremoto de 1755.",
@@ -234,6 +234,40 @@ const CITIES: &[City] = &[
         "Queria provar um bolo escuro feito com mel de cana.",
         "Disse que ia pra onde a pista do aeroporto se apoia em colunas sobre o mar.",
         "Queria comprar um bordado feito à mão numa ilha.",
+    ]},
+    City { name: "Budapeste", desc: "Capital da Hungria. Danúbio, banhos termais e um Parlamento de cartão-postal.",
+        people: ["Banhista das termas", "Vendedora de páprica", "Guia do Parlamento"], clues: [
+        "Trocou reais por florins húngaros.",
+        "Queria ver o Parlamento iluminado à beira do Danúbio.",
+        "Perguntou como chegar às termas Széchenyi.",
+        "Disse que ia pro país da embaixada onde o pai dele dormiu duas noites.",
+    ], vague: [
+        "Disse que ia pra uma capital que são duas cidades, uma de cada lado do rio.",
+        "Queria jogar xadrez dentro de uma piscina quente, ao ar livre, no inverno.",
+        "Comprou páprica em pó num mercado coberto.",
+        "Disse que ia pra terra do inventor do cubo mágico.",
+    ], subtle: [
+        "Disse que ia pra onde gulash de verdade é sopa, não ensopado.",
+        "Falou de uma língua sem parentesco com os vizinhos, prima distante do finlandês.",
+        "Comentou que ia pra cidade do metrô mais antigo da Europa depois do de Londres.",
+        "Disse que ia pra onde Puskás aprendeu a chutar.",
+    ]},
+    City { name: "Assunção", desc: "Capital do Paraguai. Calor, tereré e guarani falado nas ruas.",
+        people: ["Vendedora de chipa", "Sacoleiro", "Harpista de polca"], clues: [
+        "Trocou reais por guaranis.",
+        "Queria tomar tereré gelado na beira do rio Paraguai.",
+        "Perguntou onde fica o Palacio de los López.",
+        "Disse que ia pra capital do vizinho onde se fala guarani.",
+    ], vague: [
+        "Disse que ia pra um país sem mar, mas dono de meia usina gigante na fronteira.",
+        "Queria provar uma sopa que se come de garfo.",
+        "Disse que ia pra onde a moeda leva o nome de um povo indígena.",
+        "Comprou uma renda bordada que parece teia de aranha.",
+    ], subtle: [
+        "Disse que ia pra 'mãe das cidades', de onde saíram as fundações de várias outras.",
+        "Falou de um país que perdeu boa parte dos homens numa guerra contra três vizinhos.",
+        "Queria ouvir uma polca tocada em harpa.",
+        "Disse que ia pra onde um 'ditador perpétuo' fechou o país por décadas.",
     ]},
 ];
 
@@ -341,7 +375,7 @@ fn witness_name(i: usize) -> &'static str {
 }
 
 // fala de abertura de cada testemunha local, mesma ordem de people
-const HELLO: [&str; 36] = [
+const HELLO: [&str; 42] = [
     "Meu cliente não comenta, mas eu sim.", "Circulando... tá bom, rapidinho.", "Olha a pamonha, pamonha fresquinha!",
     "Tempo é dinheiro, e o seu está acabando.", "Vai um de queijo enquanto conversa?", "Fala rápido que tenho entrega.",
     "Mate, limão, biscoito Globo!", "Trabalhei lá, mas nunca vi o gabinete por dentro.", "Altas ondas, brother.",
@@ -354,6 +388,8 @@ const HELLO: [&str; 36] = [
     "Senha 4.812, aguarde... ah, é você.", "Foto comigo, cinco euros.", "Não posso sair da posição, então fala daí.",
     "Segure-se, que o 28 vai a abanar!", "Ai, que saudade...", "Pastéis saídos do forno, com canela!",
     "Discrição é o nosso produto.", "Cuidado com a beira da levada.", "Prove este Madeira de 1999.",
+    "Entra, que a água tá a 38 graus.", "Páprica doce ou picante?", "Jó napot! Siga a bandeirinha.",
+    "Chipa calentita, chipa!", "Trouxe três TVs, mas cabe mais uma.", "Uma polca antes da conversa?",
 ];
 // "Fala. " para locais, vazio para genéricos
 fn hello(i: usize) -> String {
@@ -361,7 +397,7 @@ fn hello(i: usize) -> String {
 }
 
 // países por cidade, mesma ordem de CITIES
-const COUNTRY: [usize; 12] = [0, 0, 0, 1, 2, 3, 3, 3, 4, 5, 6, 6];
+const COUNTRY: [usize; 14] = [0, 0, 0, 1, 2, 3, 3, 3, 4, 5, 6, 6, 7, 8];
 // chance (%) de uma testemunha ser apoiadora do fugitivo, por posto: Estagiário nunca
 const SUPPORT_PCT: [usize; 5] = [0, 10, 20, 30, 40];
 const SUPPORT: [&str; 8] = [
