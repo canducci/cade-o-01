@@ -92,7 +92,7 @@ const CITIES: &[City] = &[
         "Disse que ia pra onde o dólar tem cor.",
         "Perguntou se os vizinhos ainda falam de Maradona em cada esquina.",
         "Queria jantar um bife de chorizo bem tarde, depois das onze.",
-        "Disse que ia pra onde tem alfajor de doce de leite em cada quiosque.",
+        "Disse que ia pra beira do rio mais largo do mundo, que parece mar.",
     ], subtle: [
         "Disse que ia pra cidade dos labirintos de Borges.",
         "Queria ver a sacada de onde Evita discursava.",
@@ -129,7 +129,7 @@ const CITIES: &[City] = &[
         "Disse que ia pra onde os brasileiros voltam com seis malas de eletrônicos.",
     ], subtle: [
         "Disse que ia pra única grande cidade americana fundada por uma mulher.",
-        "Queria ver jacarés num pântano de capim, de aerobarco.",
+        "Queria ver uma praça onde velhinhos cubanos jogam dominó.",
         "Falou de um bairro de galpões cobertos de grafites gigantes.",
         "Disse que ia ver um craque argentino jogar de camisa rosa.",
     ]},
@@ -249,7 +249,7 @@ const CITIES: &[City] = &[
     ], subtle: [
         "Disse que ia pra onde gulash de verdade é sopa, não ensopado.",
         "Falou de uma língua sem parentesco com os vizinhos, prima distante do finlandês.",
-        "Comentou que ia pra cidade do metrô mais antigo da Europa depois do de Londres.",
+        "Comentou que ia pra cidade do primeiro metrô elétrico da Europa continental.",
         "Disse que ia pra onde Puskás aprendeu a chutar.",
     ]},
     City { name: "Assunção", desc: "Capital do Paraguai. Calor, tereré e guarani falado nas ruas.",
