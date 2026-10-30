@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cadê o 01?</title>
+<style>
+  /* IBM VGA 8x16, a fonte do modo texto do VGA (VileR, CC BY-SA 4.0, ver CC-BY-SA-VGA8x16.txt) */
+  @font-face { font-family: VGA; src: url(vga8x16.woff) format('woff'); font-display: swap; }
+  body { background: #000; color: #ffff55; font: 22px/1.3 VGA, "Courier New", monospace; max-width: 760px; margin: .8em auto; padding: 0 1em; }
+  /* moldura em relevo e efeito de tubo: linhas de varredura e cantos escuros, por cima da arte */
+  #screen { position: relative; border: 4px solid; border-color: #fff #555 #555 #fff; border-bottom: 0; }
+  #screen::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(rgba(0, 0, 0, .2) 0 1px, transparent 1px 3px), radial-gradient(ellipse, transparent 60%, rgba(0, 0, 0, .4)); }
+  #art { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0000aa; shape-rendering: crispEdges; }
+  /* balão de fala sobre a cena; fica abaixo da barra de prazo e acima das linhas de varredura */
+  #screen { container-type: inline-size; }
+  #balloon { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  #say { position: absolute; top: 10%; bottom: 38%; max-width: 70%; display: flex; flex-direction: column; justify-content: flex-end; }
+  #say div { padding: .2em .45em; color: #000; background: #fff; border: 2px solid #000; font-size: max(17px, 3.6cqw); line-height: 1.05; pointer-events: auto; cursor: pointer; }
+  #tail { position: absolute; bottom: calc(38% - 10px); width: 14px; height: 12px; margin-left: -7px; background: #000; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  #tail::after { content: ''; position: absolute; left: 3px; top: 0; width: 8px; height: 8px; background: #fff; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  /* provas e eventos: faixa que pisca ao entrar */
+  .hl { padding: .3em 1em; color: #000; background: #ffff55; border: 2px solid #000; animation: blink .25s steps(1) 4; }
+  .hl.bad { color: #fff; background: #aa0000; }
+  @media (prefers-reduced-motion: reduce) { .hl { animation: none; } }
+  #text { white-space: pre-wrap; border: 6px double #aaaaaa; padding: .8em 1em; background: #0000aa; min-height: 6em; cursor: pointer; }
+  #opts { display: grid; grid-template-columns: 1fr 1fr; gap: .4em; margin-top: .4em; }
+  @media (max-width: 600px) { body { font-size: 20px; } #opts { grid-template-columns: 1fr; } #say { max-width: 96%; } }
+  /* alvo de toque de pelo menos 44px */
+  #opts button, #opts a { display: block; box-sizing: border-box; width: 100%; min-height: 44px; padding: .5em .6em; text-align: left; font: inherit; font-size: 21px; line-height: 1.1; color: #000; background: #55ffff; border: 0; cursor: pointer; text-decoration: none;
+    box-shadow: inset 3px 3px 0 #fff, inset -3px -3px 0 #00aaaa; }
+  #opts button:hover, #opts button:focus, #opts a:hover, #opts a:focus { background: #fff; }
+  #opts button:active, #opts a:active { box-shadow: inset 3px 3px 0 #00aaaa, inset -3px -3px 0 #fff; }
+  #opts button:disabled { opacity: .4; }
+  .cloud { animation: drift linear infinite; }
+  @keyframes drift { from { transform: translateX(-60px); } to { transform: translateX(200px); } }
+  .rain { animation: fall .5s linear infinite; }
+  @keyframes fall { from { transform: translateY(-10px); } to { transform: translateY(10px); } }
+  .spin { transform-box: fill-box; transform-origin: center; animation: spin 8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .blink { animation: blink .6s steps(1) infinite; }
+  .blink2 { animation: blink .6s steps(1) infinite -.3s; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .bob { animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(1.5px); } }
+  .run { animation: run 3s linear forwards; }
+  @keyframes run { from { transform: translateX(170px); } to { transform: translateX(-30px); } }
+  /* longe das opções e sem atalho numérico, para não abandonar sem querer */
+  #quit { display: block; min-height: 44px; margin: 2em 0 0 auto; padding: .5em .8em; font: inherit; font-size: 20px; color: #ff5555; background: none; border: 2px solid #ff5555; cursor: pointer; }
+  #quit[hidden] { display: none; }
+  #snd { position: fixed; top: .2em; right: .2em; width: 44px; height: 44px; font-size: 20px; background: none; border: 0; cursor: pointer; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .away { animation: away 3s ease-in forwards; }
+  @keyframes away { from { transform: translate(0, 0); } to { transform: translate(140px, -70px) scale(.3); } }
+</style>
+</head>
+<body>
+<button id="snd" title="Som (tecla S)" aria-label="Ligar ou desligar o som">🔊</button>
+<div id="screen"><svg id="art" viewBox="0 0 160 90" role="img" aria-label="Carregando"></svg>
+  <div id="balloon" hidden aria-hidden="true"><div id="say"><div></div></div><div id="tail"></div></div></div>
+<div id="news" aria-hidden="true"></div>
+<div id="text" aria-hidden="true">Carregando…</div>
+<div id="sr" class="sr" aria-live="polite"></div>
+<div id="opts"></div>
+<button id="quit" hidden>✖ Abandonar caso e voltar ao menu</button>
+<!-- métricas anônimas, sem cookies (GoatCounter); localhost não conta -->
+<script data-goatcounter="https://cade-o-01.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script type="module">
+// --- arte: tudo desenhado aqui; base nas 16 cores EGA, que abrem a paleta padrão do VGA ---
+const K = { blk: '#000', blu: '#0000aa', grn: '#00aa00', cya: '#00aaaa', red: '#aa0000', mag: '#aa00aa', brn: '#aa5500', gry: '#aaaaaa',
+  dgr: '#555555', lbl: '#5555ff', lgn: '#55ff55', lcy: '#55ffff', lrd: '#ff5555', lmg: '#ff55ff', yel: '#ffff55', wht: '#fff' };
+const R = (x, y, w, h, c, a = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" ${a}/>`;
+const P = (pts, c, a = '') => `<polygon points="${pts}" fill="${c}" ${a}/>`;
+const C = (x, y, r, c, a = '') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" ${a}/>`;
+const D = (d, c, a = '') => `<path d="${d}" fill="${c}" ${a}/>`;
+const T = (x, y, s, c, txt, a = '') => `<text x="${x}" y="${y}" font-size="${s}" fill="${c}" font-family="VGA, monospace" ${a}>${txt}</text>`;
+// sprites: grade de texto, 1 letra = 1 pixel de 2x2 unidades; '.' é transparente
+const PAL = { k: K.blk, b: K.blu, g: K.grn, c: K.cya, r: K.red, m: K.mag, n: K.brn, a: K.gry, d: K.dgr, B: K.lbl,
+  G: K.lgn, C: K.lcy, R: K.lrd, M: K.lmg, y: K.yel, w: K.wht, p: '#ffaa77', q: '#db8a5d' };
+const spr = (rows, x, y, a = '', s = 2) => {
+  let out = '';
+  rows.forEach((row, j) => {
+    for (let i = 0; i < row.length;) {
+      let n = 1;
+      while (row[i + n] === row[i]) n++;
+      if (row[i] !== '.') out += R(i * s, j * s, n * s, s, PAL[row[i]]);
+      i += n;
+    }
+  });
+  return `<g transform="translate(${x} ${y})" ${a}>${out}</g>`;
+};
+const at = (rows, x, bottom, a, s = 2) => spr(rows, x, bottom - rows.length * s, a, s); // apoia o sprite no chão
+const anim = (cls, s) => `<g class="${cls}">${s}</g>`; // animação CSS fora do transform do sprite
+
+const CLOUD = ['..www....', '.wwwwww..', 'wwwwwwwww'];
+const IGUANA = ['.....GGk', 'GGGGGGG.', '.g..g...'];
+// mandado: papel com selo vermelho do STF
+const WARRANT = ['wwwwwwww', 'wkkkkkkw', 'wwwwwwww', 'wkkkkkww', 'wwwwwwww', 'wkkkwRRw', 'wwwwwRRw', 'wwwwwwww'];
+const JET = ['ww...........', 'www..........', 'wwwwwwwwwwww.', 'wCwCwCwCwwwwC', '.wwwwwwwwwww.', '.....ww......', '....ww.......'];
+
+// personagens 16x26 em pixel de 1 unidade (mesmo tamanho na tela dos antigos 8x13 em pixel 2)
+// H cabelo/chapéu, S camisa, L calça, p pele; minúsculas s/l = sombra do lado direito
+const PERSON = ['....HHHHHHHH....', '...HHHHHHHHHH...', '..HHHHHHHHHHHH..', '..HHpppppppppH..', '..Hppppppppppp..',
+  '..ppwkppppwkpp..', '..pppppppppppp..', '...pppppppppp...', '...pppprrpppp...', '....pppppppp....', '.....pppppp.....', '......pppp......',
+  '..SSSSSwwSSSSS..', '.SSSSSSSSSSSSss.', 'SSSSSSSSSSSSSsss', 'SS.SSSSSSSSSs.ss', 'SS.SSSSSSSSSs.ss', 'pp.SSSSSSSSSs.pp',
+  'pp.kkkkyykkkk.pp', '...LLLLLLLLLl...', '...LLLL..LLLl...', '...LLLL..LLLl...', '...LLLL..LLLl...', '...LLLL..LLLl...',
+  '...kkkk..kkkk...', '..kkkkk..kkkkk..'];
+// cabeças alternativas (5 primeiras linhas)
+const TOP = {
+  hat: ['....HHHHHHHH....', '....HHHHHHHH....', '....kkkkkkkk....', 'HHHHHHHHHHHHHHHH', '..pppppppppppp..'],
+  cap: ['....HHHHHHH.....', '...HHHHHHHHH....', '...HHHHHHHHHHHHH', '..pppppppppppp..', '..pppppppppppp..'],
+  chef: ['...HHHHHHHHHH...', '..HHHHHHHHHHHH..', '...HHHHHHHHHH...', '...aaaaaaaaaa...', '..pppppppppppp..'],
+  bald: ['................', '....pppppppp....', '...pppppppppp...', '..HppppppppppH..', '..HppppppppppH..'],
+  ears: ['HHH..........HHH', 'HHHH........HHHH', '..HHHHHHHHHHHH..', '..HHHHHHHHHHHH..', '..pppppppppppp..'],
+  plume: ['..HHHHHHHHHHH...', '...HHHHHHHHHHH..', '...aaaaaaaaaa...', '..aaaaaaaaaaaa..', '..appppppppppa..'],
+};
+const DARK = { w: 'a', a: 'd', d: 'k', k: 'k', y: 'n', C: 'c', G: 'g', R: 'r', M: 'm', B: 'b', b: 'k', n: 'r', r: 'k', g: 'k', c: 'b', m: 'k' };
+const person = (h, s, l, skin = 'p', top) => [...(TOP[top] || PERSON.slice(0, 5)), ...PERSON.slice(5)]
+  .map(r => r.replace(/H/g, h).replace(/s/g, DARK[s]).replace(/S/g, s).replace(/l/g, DARK[l]).replace(/L/g, l).replace(/p/g, skin));
+// troca trechos de linhas: {linha: [coluna, texto]}
+const patch = (rows, ps) => rows.map((r, j) => (ps[j] || []).reduce((r, [c, t]) => r.slice(0, c) + t + r.slice(c + t.length), r));
+// mesma ordem de WITNESSES em src/lib.rs
+const WITNESS = [person('y', 'w', 'd'), person('k', 'w', 'k'), person('n', 'd', 'd', 'n'), person('n', 'M', 'b'),
+  person('k', 'a', 'd', 'n'), person('M', 'C', 'b'), person('b', 'w', 'b'), person('a', 'G', 'n', 'n'),
+  // locais, 3 por cidade, na ordem de CITIES
+  person('k', 'd', 'd'), person('k', 'd', 'd', 'n', 'bald'), person('y', 'y', 'b', 'p', 'hat'), // Brasília
+  person('n', 'b', 'b'), person('w', 'w', 'b', 'p', 'chef'), person('r', 'r', 'k', 'n', 'cap'), // São Paulo
+  person('y', 'y', 'w', 'n', 'hat'), person('a', 'w', 'd', 'p', 'bald'), person('y', 'C', 'b', 'n'), // Rio
+  person('k', 'R', 'k'), person('w', 'w', 'k', 'p', 'chef'), person('k', 'g', 'd', 'p', 'cap'), // Buenos Aires
+  person('w', 'w', 'n', 'n', 'hat'), person('k', 'C', 'n', 'n', 'cap'), person('b', 'b', 'b', 'n', 'cap'), // Guayaquil
+  person('y', 'R', 'R', 'p', 'cap'), person('k', 'w', 'k', 'n'), person('n', 'G', 'b', 'p', 'cap'), // Miami
+  person('k', 'R', 'y', 'k', 'ears'), person('M', 'M', 'd'), person('n', 'M', 'b'), // Orlando
+  person('a', 'k', 'k'), person('b', 'b', 'b', 'n', 'cap'), person('y', 'w', 'd'), // Washington
+  person('a', 'w', 'n', 'p', 'hat'), person('k', 'g', 'd', 'n'), person('a', 'n', 'n', 'p', 'chef'), // Jerusalém
+  person('k', 'b', 'd'), person('R', 'y', 'n', 'p', 'plume'), person('R', 'y', 'b', 'p', 'plume'), // Roma
+  person('k', 'y', 'd', 'p', 'cap'), person('k', 'd', 'k'), person('w', 'w', 'd', 'p', 'chef'), // Lisboa
+  person('a', 'd', 'd', 'p', 'bald'), person('n', 'G', 'n', 'p', 'hat'), person('a', 'm', 'n'), // Funchal
+  person('a', 'C', 'C', 'p', 'bald'), person('y', 'R', 'g'), person('k', 'g', 'd', 'p', 'cap'), // Budapeste
+  person('k', 'w', 'b', 'n'), person('n', 'R', 'b', 'n', 'cap'), person('k', 'w', 'k', 'n', 'hat')]; // Assunção
+// acessório na mão direita de cada testemunha, mesma ordem de WITNESS
+const PROP = {
+  taxi: ['kyk', 'yyy'], tray: ['wyw', 'aaa'], folder: ['yy', 'yy'], choc: ['MMM', 'nnn'], sign: ['RRR', 'RwR', '.a.', '.a.', '.a.'],
+  phone: ['k', 'C', 'k'], roll: ['kkk', 'kkk', 'kkk', 'a.a'], bino: ['k.k', 'kkk'], case: ['.k.', 'nnn', 'nnn'], radio: ['a', 'k', 'k'],
+  corn: ['g', 'y', 'y', 'g'], money: ['.g.', 'ggg', 'ggg'], pastel: ['.y.', 'yyy'], box: ['RRR', 'RRR', 'RRR'], tank: ['aa', 'aa', 'aa'],
+  board: ['w', 'R', 'w', 'R', 'w', 'w'], rose: ['R', 'g', 'g'], spit: ['a', 'r', 'r', 'a'], bills: ['ggg', 'ggg'], hats: ['www', 'www'],
+  flag: ['RR', 'a.', 'a.', 'a.'], clip: ['ww', 'ww', 'aa'], buoy: ['RwR', 'w.w', 'RwR'], cup: ['w', 'n'], bags: ['nnn', 'kkk', 'nnn', 'kkk'],
+  balloon: ['R', 'R', 'a', 'a'], ticket: ['yy', 'yy'], shop: ['M.M', 'MMM', 'MMM'], papers: ['ww', 'ww', 'ww'], pita: ['nn', 'yy'],
+  staff: ['n', 'n', 'n', 'n', 'n', 'n'], passport: ['rr', 'ry'], shield: ['yRy', 'RRR', '.R.'], spear: ['a', 'a', 'n', 'n', 'n', 'n'],
+  bell: ['y', 'y'], guitar: ['.n', '.n', 'nn', 'nn'], nata: ['.n.', 'nyn'], calc: ['aa', 'kk', 'aa'], wine: ['.g', 'gg', 'gg'],
+  chess: ['kw', 'wk'], paprika: ['.g', 'RR', 'RR', '.R'], chipa: ['.y.', 'y.y', '.y.'], harp: ['n..', 'nn.', 'nan', 'nnn'],
+};
+const ACC = ['taxi', 'tray', 'folder', 'choc', 'sign', 'phone', 'roll', 'bino',
+  'case', 'radio', 'corn', 'money', 'pastel', 'box', 'tank', 'folder', 'board', 'rose', 'spit', 'bills',
+  'hats', 'flag', 'clip', 'buoy', 'cup', 'bags', 'balloon', 'ticket', 'shop', 'case', 'radio', 'papers',
+  'flag', 'pita', 'staff', 'passport', 'shield', 'spear', 'bell', 'guitar', 'nata', 'calc', 'staff', 'wine',
+  'chess', 'paprika', 'flag', 'chipa', 'bags', 'harp'];
+// protagonistas em resolução VGA: 32x52 em pixel de meia unidade (mesmo tamanho na tela), de boné
+// H boné e J sua sombra, S/s roupa, L/l calça, q sombra da pele
+const BIG = ['..........HHHHHHHHHH............', '........HHHHHHHHHHHHJJ..........', '.......HHHHHHHHHHHHHHJJ.........',
+  '......HHHHHHHHHHHHHHHHJJ........', '......HHHHHHHHHHHHHHHHJJkkkkkkk.', '......JJJJJJJJJJJJJJJJJJkkkkkkkk',
+  '....ppppppppppppppppppppppqq....', '....pppkkkpppppppppkkkpppppq....', '....ppppppppppppppppppppppqq....',
+  '...pppppppppppppppppppppppqqq...', '...pppppwwkkppppppppwwkkppqqq...', '...pppppwwkkppppppppwwkkppqqq...',
+  '...pppppppppppppppppppppppqqq...', '....pppppppppppqqppppppppppq....', '......ppppppppppppppppppqq......',
+  '......ppppppppppppppppppqq......', '......pppppppprrrrppppppqq......', '......ppppppppppppppppppqq......',
+  '........ppppppppppppppqq........', '........ppppppppppppppqq........', '..........ppppppppppqq..........',
+  '..........ppppppppppqq..........', '............qqqqqqqq............', '............ppppppqq............',
+  '....SSSSSSSSSSwwwwSSSSSSSSss....', '....SSSSSSSSSSSwwSSSSSSSSSss....', '..SSSSSSSSSSSSSSSSSSSSSSSSssss..',
+  '..SSSSSSSSSSSSSSSSSSSSSSSSssss..', 'SSSSSSSSSSSSSSSSSSSSSSSSSSssssss', 'SSSSSSSSSSSSSSSSSSSSSSSSSSssssss',
+  ...Array(4).fill('SSSS..SSSSSSSSSSSSSSSSSSss..ssss'), 'pppp..SSSSSSSSSSSSSSSSSSss..pppq', 'pppp..SSSSSSSSSSSSSSSSSSss..pppq',
+  'pppp..kkkkkkkkyyyykkkkkkkk..pppq', '.pp...kkkkkkkkykkykkkkkkkk...pq.', '......LLLLLLLLLLLLLLLLLLll......',
+  '......LLLLLLLLLLLLLLLLLLll......', ...Array(8).fill('......LLLLLLLL....LLLLLLll......'),
+  '......kkkkkkkk....kkkkkkkk......', '......kkkkkkkk....kkkkkkkk......', '....kakkkkkkkk....kakkkkkkkk....',
+  '....kkkkkkkkkk....kkkkkkkkkk....'];
+const big = (h, s, l) => BIG.map(r => r.replace(/J/g, DARK[h]).replace(/H/g, h).replace(/s/g, DARK[s]).replace(/S/g, s).replace(/l/g, DARK[l]).replace(/L/g, l));
+// 01: boné verde-amarelo, óculos escuros, terno escuro de lapela e gravata verde
+const FLAVIO = patch(big('y', 'd', 'd'), { 0: [[14, 'gg']], 4: [[24, 'GGGGGGG']], 5: [[24, 'gggggggg']],
+  10: [[6, 'kkkkkkkkkkkkkkkkkkkk']], 11: [[6, 'kwkkkkkkkppkwkkkkkkk']], 12: [[6, 'pkkkkkkkppppkkkkkkkp']],
+  24: [[12, 'wwggggww']], 25: [[12, 'aawggwaa']], 26: [[13, 'awggwa']], 27: [[14, 'agga']],
+  ...Object.fromEntries([28, 29, 30, 31, 32, 33, 34].map(j => [j, [[15, 'gg']]])) });
+// agente: boné e farda azuis com faixa e distintivo amarelos, coturno marrom
+const AGENT = patch(big('b', 'b', 'k'), { 26: [[19, 'yy']], 27: [[19, 'yy']], 28: [[6, 'y'.repeat(20)]], 29: [[6, 'y'.repeat(20)]],
+  ...Object.fromEntries([48, 49].map(j => [j, [[6, 'nnnnnnnn'], [18, 'nnnnnnnn']]])),
+  ...Object.fromEntries([50, 51].map(j => [j, [[4, 'nnnnnnnnnn'], [18, 'nnnnnnnnnn']]])) });
+const FEET = 88;
+
+// --- VGA: cena em 160x90 unidades, pixel de meia unidade (320x180); cores de 18 bits (6 por canal) ---
+const PX = .5, snap = v => Math.round(v / PX) * PX;
+const rgb = c => (c.length === 4 ? [...c.slice(1)].map(h => h + h) : c.slice(1).match(/../g)).map(h => parseInt(h, 16));
+// mistura duas cores e arredonda cada canal para os 64 níveis do DAC do VGA
+const vga = (c1, c2, t) => '#' + rgb(c1).map((v, i) => Math.round(Math.round((v + (rgb(c2)[i] - v) * t) * 63 / 255) * 255 / 63).toString(16).padStart(2, '0')).join('');
+// meio-tom: a cor por cima a 50% (no EGA era pontilhado xadrez)
+// os <defs> vão dentro da cena, para o cartão de compartilhar (que serializa só o #art) levar junto
+const DITHER = '<defs>' + Object.entries(K).map(([k, c]) =>
+  `<pattern id="d-${k}" width="1" height="1" patternUnits="userSpaceOnUse">${R(0, 0, 1, 1, c, 'fill-opacity=".5"')}</pattern>`).join('') + '</defs>';
+const dith = (x, y, w, h, c1, c2) => R(x, y, w, h, K[c1]) + R(x, y, w, h, `url(#d-${c2})`);
+// degradê vertical (céu, mar) de top a bottom em faixas de 1 pixel, cor interpolada entre as paradas
+const grad = (top, bottom, ...cs) => {
+  const n = (bottom - top) / PX;
+  return R(0, top, 160, bottom - top, K[cs.at(-1)]) + Array.from({ length: n }, (_, j) => {
+    const u = j / (n - 1) * (cs.length - 1), k = Math.min(Math.floor(u), cs.length - 2);
+    return R(0, top + j * PX, 160, PX, vga(K[cs[k]], K[cs[k + 1]], u - k));
+  }).join('');
+};
+// forma desenhada linha a linha: meia-largura f(t), t de 0 (topo) a 1 (base); lado esquerdo iluminado
+const shape = (cx, top, bottom, f, lit, shade = lit) => Array.from({ length: Math.round((bottom - top) / PX) }, (_, j) => {
+  const h = snap(f((j + 1) * PX / (bottom - top)));
+  return h > 0 ? R(cx - h, top + j * PX, h, PX, K[lit] ?? lit) + R(cx, top + j * PX, h, PX, K[shade] ?? shade) : '';
+}).join('');
+// mesma forma com o lado direito em meio-tom, para sombra suave
+const shaded = (cx, top, bottom, f, lit, dark) => shape(cx, top, bottom, f, lit) + shape(cx, top, bottom, f, 'none', `url(#d-${dark})`);
+const round = t => Math.sqrt(t * (2 - t)); // perfil de cúpula
+const disc = (cx, cy, r, c) => shape(cx, cy - r, cy, t => r * round(t), c) + shape(cx, cy, cy + r, t => r * round(1 - t + PX / r), c);
+// traço de pontos w x w, um a cada pixel
+const line = (x1, y1, x2, y2, c, w = PX) => {
+  const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / PX;
+  return Array.from({ length: n + 1 }, (_, i) => R(snap(x1 + (x2 - x1) * i / n), snap(y1 + (y2 - y1) * i / n), w, w, K[c])).join('');
+};
+const BIRD = ['k...k', '.k.k.', '..k..'];
+const birds = (y, dur) => `<g class="cloud" style="animation-duration:${dur}s">${spr(BIRD, 0, y, '', 1)}${spr(BIRD, 8, y + 4, '', 1)}</g>`;
+const CRISTO = ['.......w.......', '......www......', '......wwa......', 'wwwwwwwwwwwwwwa', 'aaaaawwwaaaaaa.', '......wwa......',
+  '......wwa......', '.....wwwa......', '.....wwwa......', '.....wwwaa.....', '.....wwwaa.....', '....wwwwaa.....', '....wwwwaa.....',
+  '...wwwwwaaa....', '....aaaaaaa....', '....ddddddd....', '....aaaaaaa....', '....ddddddd....'];
+const ministry = x => R(x, 57, 7, 7, K.gry) + [58, 60, 62].map(y => R(x + 1, y, 5, 1, K.dgr)).join('');
+const CALCADA = [80, 85].map(y => Array.from({ length: 160 / PX }, (_, i) => R(i * PX, y + snap(2 * Math.sin(i * PX / 4)), PX, 1, K.gry)).join('')).join('');
+
+// prédio com janelas em grade e lado direito na sombra
+const tower = (x, top, bottom, w, c, wc, sh) => R(x, top, w, bottom - top, K[c]) + R(x + w - 1, top, 1, bottom - top, K[sh]) +
+  Array.from({ length: Math.floor((bottom - top - 2) / 3) }, (_, j) => Array.from({ length: Math.floor((w - 1) / 2) }, (_, i) =>
+    R(x + 1 + i * 2, top + 2 + j * 3, 1, 1, K[wc])).join('')).join('');
+const arch = (x, y, w, h, c) => R(x, y + 1, w, h - 1, K[c]) + R(x + 1, y, w - 2, 1, K[c]);
+const palm = (x, bottom, h, trunk = 'brn', leaf = 'grn', leaf2 = 'lgn') => {
+  const tx = x + 4, ty = bottom - h;
+  return Array.from({ length: h / PX }, (_, j) => R(x + snap(3 * (j * PX / h) ** 2), bottom - (j + 1) * PX, 2, PX, K[trunk])).join('') +
+    [[-10, 4], [-7, 7], [-4, -3], [4, -3], [7, 7], [10, 4], [0, -4]].map(([dx, dy]) =>
+      line(tx, ty, tx + dx, ty + dy, leaf2, 1) + line(tx, ty + 1, tx + dx, ty + dy + 1, leaf, 1)).join('');
+};
+const crown = (x, bottom, r, c, hi, trunk = 'brn') => R(x - 1, bottom - r - 2, 2, r + 2, K[trunk]) + disc(x, bottom - r - 3, r, c) + disc(x - r / 3, bottom - r - 4 - r / 3, r / 2, hi);
+const cypress = (x, bottom, h) => R(x - 1, bottom - 2, 2, 2, K.brn) + shape(x, bottom - h, bottom - 2, t => .5 + 3 * Math.sin(Math.PI * Math.min(1, t * 1.15) * .85), 'grn', 'dgr');
+const burst = (x, y, r, c) => R(x, y, 1, 1, K.wht) + Array.from({ length: 8 }, (_, k) => [r, r * .55].map(d =>
+  R(x + Math.round(d * Math.cos(k * Math.PI / 4)), y + Math.round(d * Math.sin(k * Math.PI / 4)), 1, 1, K[c])).join('')).join('');
+const ferris = (cx, cy, r) => {
+  const pts = Array.from({ length: 8 }, (_, k) => [cx + Math.round(r * Math.cos(k * Math.PI / 4)), cy + Math.round(r * Math.sin(k * Math.PI / 4))]);
+  const spokes = odd => pts.filter((_, k) => k % 2 === odd).map(([x, y]) => line(cx, cy, x, y, 'gry')).join('');
+  return line(cx, cy, cx - 9, 66, 'gry') + line(cx, cy, cx + 9, 66, 'gry') +
+    Array.from({ length: 128 }, (_, k) => R(cx + snap(r * Math.cos(k * Math.PI / 64)), cy + snap(r * Math.sin(k * Math.PI / 64)), 1, 1, K.wht)).join('') +
+    anim('blink', spokes(0)) + anim('blink2', spokes(1)) + pts.map(([x, y], k) => R(x - 1, y, 3, 3, K[['lrd', 'yel', 'lcy', 'lgn'][k % 4]])).join('');
+};
+const coaster = (x0, x1) => Array.from({ length: (x1 - x0) / PX }, (_, j) => {
+  const i = j * PX, y = snap(42 - 12 * Math.cos(i / 6) - 4 * Math.sin(i / 2.5));
+  return R(x0 + i, y, PX, 2, K.lrd) + (i % 5 ? '' : R(x0 + i, y + 2, 1, 66 - y - 2, K.gry));
+}).join('');
+// coliseu: 3 andares de arcos e ático, ruína em degraus à direita, sombra pontilhada
+const coliseu = () => Array.from({ length: 88 }, (_, i) => {
+  const x = 36 + i, top = x < 98 ? 26 : 26 + 4 * Math.floor((x - 96) / 4), m = (x - 38) % 6;
+  let o = R(x, top, 1, 66 - top, K.yel) + (x >= 104 ? R(x, top, 1, 66 - top, 'url(#d-brn)') : '');
+  for (const [y, h] of [[36, 7], [46, 7], [56, 10]]) {
+    if (top <= y - 2) o += R(x, y - 2, 1, 1, K.wht);
+    if (top < y - 2 && x >= 38 && x <= 121 && m < 4) o += R(x, m % 3 ? y : y + 1, 1, m % 3 ? h : h - 1, K.dgr);
+  }
+  return o + (top <= 29 && (x - 40) % 8 < 2 ? R(x, 29, 1, 2, K.brn) : '');
+}).join('');
+const tram28 = (x, b) => line(x + 20, b - 16, x + 24, b - 28, 'dgr') + R(x + 1, b - 17, 32, 2, K.wht) + R(x, b - 15, 34, 11, K.yel) +
+  R(x + 32, b - 15, 2, 11, K.brn) + [3, 9, 15, 21, 27].map(i => R(x + i, b - 13, 4, 4, K.lcy) + R(x + i, b - 13, 1, 4, K.wht)).join('') +
+  R(x, b - 7, 34, 2, K.wht) + R(x, b - 5, 34, 1, K.brn) + R(x + 4, b - 4, 5, 4, K.blk) + R(x + 25, b - 4, 5, 4, K.blk);
+const ship = (x, b) => R(x, b - 7, 46, 5, K.wht) + R(x + 2, b - 2, 42, 2, K.blu) + R(x + 6, b - 11, 34, 4, K.wht) + R(x + 12, b - 14, 22, 3, K.wht) +
+  R(x + 38, b - 11, 2, 9, K.gry) + R(x + 26, b - 19, 5, 5, K.lrd) + R(x + 26, b - 19, 5, 1, K.blk) +
+  [b - 6, b - 4, b - 10, b - 13].map((y, r) => Array.from({ length: 14 - r * 2 }, (_, i) => R(x + 4 + r * 3 + i * 3, y, 1, 1, K.lbl)).join('')).join('');
+const CAR = ['..RRRRR...', '.RCCRCCR..', 'RRRRRRRRRR', 'RRRRRRRRRw', '.kk...kk..'];
+const VESPA = ['......k', '...RR.k', '..RRRRR', 'RRRRRRR', '.kk..kk'];
+const drive = (sprite, y, dur) => `<g class="cloud" style="animation-duration:${dur}s">${spr(sprite, 0, y, '', 1)}</g>`;
+const lanes = y => [6, 26, 46, 66, 86, 106, 126, 146].map(x => R(x, y, 8, 1, K.yel)).join('');
+const hash = i => (i * 2654435761 >>> 0) % 1000 / 1000; // pseudoaleatório fixo, para o desenho não mudar a cada tela
+const CITY = [
+  // Brasília: céu seco, Esplanada, Congresso (torres, cúpula do Senado, cuia da Câmara) e espelho d'água
+  () => DITHER + grad(0, 64, 'blu', 'lbl', 'lcy') + anim('bob', disc(140, 12, 5, 'yel')) + R(18, 14, 34, 1, 'url(#d-wht)') + R(96, 20, 26, 1, 'url(#d-wht)') +
+    birds(26, 34) + R(0, 60, 160, 4, K.grn) + [4, 18, 31, 128, 141, 154].map(x => R(x, 58, 6, 2, K.grn)).join('') +
+    [6, 18, 30, 132, 144].map(ministry).join('') +
+    [76, 82].map(x => R(x, 18, 3, 36, K.wht) + R(x + 3, 18, 1, 36, K.gry)).join('') + R(80, 18, 2, 36, K.dgr) +
+    [22, 26, 30, 34, 38, 42, 46, 50].map(y => R(76, y, 8, 1, K.gry)).join('') +
+    R(40, 54, 90, 3, K.wht) + R(40, 57, 90, 1, K.gry) + R(44, 58, 82, 6, K.dgr) + R(46, 60, 78, 1, K.blk) +
+    shape(58, 47, 54, t => 7 * round(t), 'wht', 'gry') +
+    shape(108, 46, 54, t => 3 + 9 * (1 - t) ** 1.5, 'wht', 'gry') + R(98, 46, 20, 1, K.gry) +
+    grad(64, 70, 'blu', 'lbl') + R(76, 64, 8, 5, 'url(#d-gry)') + anim('bob', R(30, 67, 10, 1, K.lcy) + R(110, 66, 14, 1, K.lcy)) +
+    R(0, 70, 160, 20, K.grn) + dith(0, 70, 160, 2, 'grn', 'lgn'),
+  // São Paulo: garoa, paredão de prédios, MASP na Paulista e trânsito
+  () => DITHER + grad(0, 62, 'dgr', 'gry') +
+    [[0, 34, 8], [9, 24, 7], [17, 38, 6], [24, 18, 9], [34, 30, 7], [44, 36, 8], [58, 26, 7], [66, 32, 9], [90, 22, 8], [99, 34, 6],
+      [110, 28, 8], [119, 36, 6], [126, 16, 9], [136, 28, 7], [144, 22, 8], [153, 34, 7]].map(([x, t, w]) => tower(x, t, 62, w, 'dgr', 'gry', 'blk')).join('') +
+    R(0, 62, 160, 8, K.gry) + R(48, 40, 4, 26, K.lrd) + R(51, 40, 1, 26, K.red) + R(108, 40, 4, 26, K.lrd) + R(111, 40, 1, 26, K.red) +
+    R(52, 43, 56, 12, K.blk) + [56, 62, 68, 74, 80, 86, 92, 98, 104].map(x => R(x, 43, 1, 12, K.dgr)).join('') + R(53, 45, 54, 1, 'url(#d-cya)') +
+    R(48, 40, 64, 3, K.lrd) + R(48, 42, 64, 1, K.red) + R(48, 55, 64, 2, K.lrd) + R(64, 64, 1, 2, K.blk) + R(90, 63, 1, 3, K.blk) +
+    R(0, 70, 160, 20, K.dgr) + R(0, 70, 160, 1, K.gry) + lanes(79) + drive(CAR, 72, 9) +
+    anim('rain', Array.from({ length: 20 }, (_, i) => R(i * 8 + 3, 6 + (i * 23) % 50, 1, 3, K.lcy)).join('')),
+  // Rio: Corcovado com o Cristo, Pão de Açúcar com bondinho, mar, areia e o calçadão de ondas de Copacabana
+  () => DITHER + grad(0, 58, 'blu', 'lbl', 'lcy') + anim('bob', disc(18, 14, 4, 'yel')) + spr(CLOUD, 96, 12, '', 1) + spr(CLOUD, 20, 30, '', 1) +
+    birds(36, 28) + shape(30, 44, 60, t => 30 * round(t), 'cya') + shape(100, 48, 60, t => 22 * round(t), 'cya') +
+    shape(72, 31, 60, t => 4 + 34 * t ** .8, 'lgn', 'grn') + at(CRISTO, 65, 32, '', 1) +
+    grad(58, 68, 'blu', 'lbl') +
+    shape(118, 46, 60, t => 9 * Math.sqrt(t), 'gry', 'dgr') + shape(140, 31, 60, t => 14 * Math.sqrt(t), 'gry', 'dgr') +
+    shape(130, 54, 60, t => 22 * round(t), 'grn') + line(119, 46, 139, 31, 'blk') + R(128, 39, 2, 2, K.lrd) +
+    anim('bob', R(10, 66, 18, 1, K.wht) + R(60, 65, 24, 1, K.wht) + R(118, 66, 20, 1, K.wht)) +
+    R(0, 68, 160, 12, K.yel) + dith(0, 68, 160, 2, 'yel', 'wht') + R(0, 80, 160, 10, K.wht) + CALCADA,
+  // Buenos Aires: Obelisco na 9 de Julio, jacarandás e Casa Rosada
+  () => DITHER + grad(0, 64, 'blu', 'lbl', 'lcy') + anim('bob', disc(30, 14, 5, 'yel')) + birds(22, 30) +
+    [[0, 44, 10], [12, 50, 8], [22, 40, 9], [140, 46, 8], [149, 38, 11]].map(([x, t, w]) => tower(x, t, 64, w, 'gry', 'wht', 'dgr')).join('') +
+    crown(52, 64, 7, 'mag', 'lmg') + crown(64, 64, 5, 'mag', 'lmg') +
+    shape(80, 10, 16, t => 4 * t, 'wht', 'gry') + shape(80, 16, 62, t => 4 + 1.5 * t, 'wht', 'gry') + R(79, 20, 2, 2, K.dgr) + R(73, 62, 14, 2, K.gry) +
+    R(96, 44, 40, 20, K.lmg) + R(130, 44, 6, 20, K.mag) + R(94, 42, 44, 2, K.wht) + R(108, 36, 16, 6, K.lmg) + R(107, 34, 18, 2, K.wht) +
+    [98, 103, 124, 129].map(x => arch(x, 47, 3, 5, 'wht') + arch(x, 55, 3, 5, 'wht')).join('') + arch(112, 52, 8, 12, 'mag') + arch(113, 38, 6, 4, 'wht') +
+    R(116, 26, 1, 8, K.dgr) + R(117, 26, 6, 1, K.lcy) + R(117, 27, 6, 1, K.wht) + R(117, 28, 6, 1, K.lcy) +
+    R(0, 64, 160, 6, K.gry) + R(0, 70, 160, 20, K.dgr) + R(0, 70, 160, 1, K.gry) + lanes(80),
+  // Guayaquil: Cerro Santa Ana com casinhas coloridas e farol, rio Guayas, malecón e iguanas
+  () => DITHER + grad(0, 58, 'lbl', 'lcy', 'wht') + anim('bob', disc(30, 14, 5, 'yel')) +
+    shape(126, 22, 58, t => 6 + 40 * t, 'lgn', 'grn') +
+    [0, 1, 2, 3, 4, 5].map(r => {
+      const y = 28 + r * 5, h = 6 + 40 * (y - 22) / 36;
+      return Array.from({ length: Math.floor((2 * h - 6) / 6) }, (_, i) => {
+        const x = Math.round(126 - h + 3 + i * 6 + (r % 2) * 3);
+        return R(x, y, 4, 4, K[['yel', 'lrd', 'lcy', 'lmg', 'wht', 'lbl'][(r + i) % 6]]) + R(x, y, 4, 1, K.red) + R(x + 1, y + 2, 1, 1, K.blk);
+      }).join('');
+    }).join('') +
+    R(124, 10, 4, 12, K.wht) + R(124, 13, 4, 2, K.lbl) + R(124, 17, 4, 2, K.lbl) + R(123, 8, 6, 2, K.dgr) + anim('blink', R(124, 6, 4, 2, K.yel)) +
+    grad(58, 66, 'blu', 'lbl') + anim('bob', R(58, 61, 14, 2, K.wht) + R(60, 63, 10, 1, K.brn) + R(64, 54, 1, 7, K.brn) + R(65, 55, 4, 5, K.wht)) +
+    R(0, 66, 160, 1, K.wht) + Array.from({ length: 40 }, (_, i) => R(i * 4, 66, 1, 4, K.wht)).join('') + R(0, 68, 160, 1, K.wht) +
+    palm(44, 70, 24) + palm(96, 70, 18) + R(0, 70, 160, 20, K.grn) + dith(0, 70, 160, 2, 'grn', 'lgn') + anim('bob', at(IGUANA, 66, 82)),
+  // Miami: pôr do sol, mar, hotel art déco com neon e coqueiros em silhueta
+  () => DITHER + grad(0, 60, 'blu', 'mag', 'lrd', 'yel') + disc(66, 56, 12, 'yel') + [48, 51, 54].map((y, i) => R(54, y, 24, i + 1, K.lrd)).join('') +
+    grad(58, 66, 'mag', 'blu') + anim('bob', R(60, 60, 12, 1, K.yel) + R(62, 62, 8, 1, K.yel) + R(64, 64, 4, 1, K.yel)) +
+    R(96, 36, 34, 30, K.wht) + R(126, 36, 4, 30, K.gry) + R(104, 30, 18, 6, K.wht) + R(110, 24, 6, 6, K.wht) + R(112, 18, 2, 6, K.gry) +
+    R(96, 40, 34, 1, K.lmg) + R(96, 50, 34, 1, K.lcy) + R(104, 32, 18, 1, K.lmg) +
+    [43, 46, 53, 56, 59].map(y => [98, 103, 108, 113, 118, 123].map(x => R(x, y, 2, 2, K.yel)).join('')).join('') + R(110, 62, 6, 4, K.dgr) +
+    palm(36, 66, 30, 'blk', 'blk', 'blk') + palm(80, 66, 22, 'blk', 'blk', 'blk') + palm(140, 66, 26, 'blk', 'blk', 'blk') +
+    R(0, 66, 160, 24, K.yel) + dith(0, 66, 160, 3, 'lrd', 'yel') + anim('bob', R(0, 66, 160, 1, K.wht)),
+  // Orlando: noite de fogos, castelo de conto de fadas, roda-gigante e montanha-russa
+  () => DITHER + grad(0, 62, 'blk', 'blu', 'mag') + [[60, 6], [100, 4], [14, 30], [150, 8], [130, 40], [6, 10]].map(([x, y]) => R(x, y, 1, 1, K.wht)).join('') +
+    `<g class="blink">${burst(44, 16, 7, 'lmg')}${burst(124, 12, 6, 'yel')}</g><g class="blink2">${burst(84, 8, 6, 'lcy')}${burst(146, 24, 5, 'lgn')}</g>` +
+    ferris(28, 40, 16) + coaster(110, 160) +
+    R(62, 48, 40, 18, K.gry) + Array.from({ length: 10 }, (_, i) => R(62 + i * 4, 46, 2, 2, K.gry)).join('') +
+    R(72, 30, 20, 18, K.wht) + R(88, 30, 4, 18, K.gry) + shape(82, 16, 30, t => 11 * t, 'lbl', 'blu') +
+    [60, 96].map(x => R(x, 36, 8, 30, K.wht) + R(x + 6, 36, 2, 30, K.gry) + shape(x + 4, 26, 36, t => 5 * t, 'lbl', 'blu') + arch(x + 2, 42, 3, 5, 'yel')).join('') +
+    arch(76, 34, 3, 5, 'yel') + arch(85, 34, 3, 5, 'yel') + arch(78, 56, 8, 10, 'blk') + R(82, 11, 1, 5, K.wht) + R(83, 11, 3, 2, K.lrd) +
+    R(0, 66, 160, 4, K.dgr) + R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht'),
+  // Washington: monumento, Capitólio com cúpula e colunatas, cerejeiras no Mall
+  () => DITHER + grad(0, 62, 'blu', 'lbl', 'lcy') + anim('bob', disc(140, 12, 5, 'yel')) + birds(20, 32) +
+    shape(50, 9, 13, t => 3 * t, 'wht', 'gry') + R(47, 13, 3, 50, K.wht) + R(50, 13, 3, 50, K.gry) + anim('blink', R(49, 9, 2, 1, K.lrd)) +
+    crown(62, 64, 5, 'lmg', 'wht') + crown(140, 64, 5, 'lmg', 'wht') +
+    R(70, 50, 80, 13, K.wht) + R(146, 50, 4, 13, K.gry) + R(70, 48, 80, 2, K.gry) + R(68, 62, 84, 2, K.gry) +
+    Array.from({ length: 26 }, (_, i) => R(72 + i * 3, 52, 1, 9, K.gry)).join('') +
+    R(98, 44, 24, 6, K.wht) + shape(110, 39, 44, t => 13 * t, 'wht', 'gry') + R(98, 32, 24, 7, K.wht) +
+    Array.from({ length: 8 }, (_, i) => R(99 + i * 3, 33, 1, 6, K.gry)).join('') + R(97, 31, 26, 1, K.gry) +
+    shape(110, 18, 31, t => 12 * round(t), 'wht', 'gry') + R(108, 13, 4, 5, K.wht) + R(109, 9, 2, 4, K.gry) +
+    R(0, 64, 160, 26, K.grn) + dith(0, 64, 160, 2, 'grn', 'lgn') + R(0, 76, 160, 3, 'url(#d-gry)'),
+  // Jerusalém: Domo da Rocha dourado sobre base de azulejos, muralha da Cidade Velha e oliveiras
+  () => DITHER + grad(0, 60, 'lbl', 'lcy', 'wht') + anim('bob', disc(138, 14, 5, 'yel')) +
+    shape(30, 44, 60, t => 40 * round(t), 'gry') + shape(130, 40, 60, t => 45 * round(t), 'gry') +
+    R(56, 44, 48, 14, K.lbl) + R(56, 46, 48, 8, 'url(#d-blu)') + R(96, 44, 8, 14, 'url(#d-blu)') +
+    Array.from({ length: 8 }, (_, i) => arch(58 + i * 6, 47, 3, 5, 'blk')).join('') + R(56, 44, 48, 1, K.wht) + R(56, 55, 48, 1, K.wht) +
+    R(64, 38, 32, 6, K.lbl) + R(64, 40, 32, 2, 'url(#d-wht)') + shaded(80, 22, 38, t => 15 * round(t), 'yel', 'brn') +
+    R(80, 15, 1, 7, K.yel) + R(78, 14, 1, 2, K.yel) + R(82, 14, 1, 2, K.yel) +
+    crown(30, 60, 6, 'grn', 'lgn') + crown(120, 60, 5, 'grn', 'lgn') +
+    R(0, 58, 160, 12, K.yel) + Array.from({ length: 27 }, (_, i) => R(i * 6, 56, 3, 2, K.yel)).join('') +
+    [61, 65].map((y, r) => R(0, y, 160, 1, K.brn) + Array.from({ length: 20 }, (_, i) => R(i * 8 + r * 4, y - 3, 1, 3, K.brn)).join('')).join('') +
+    arch(74, 60, 12, 10, 'dgr') + R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht'),
+  // Roma: Coliseu em ruína, ciprestes e uma Vespa passando
+  () => DITHER + grad(0, 62, 'lbl', 'lcy', 'wht') + anim('bob', disc(140, 12, 5, 'yel')) + birds(16, 26) +
+    cypress(28, 66, 30) + cypress(132, 66, 24) + cypress(140, 66, 18) + coliseu() +
+    R(0, 66, 160, 24, K.gry) + [70, 74, 78, 82, 86].map((y, r) => Array.from({ length: 40 }, (_, i) => R(i * 4 + (r % 2) * 2, y, 1, 1, K.dgr)).join('')).join('') +
+    drive(VESPA, 71, 12),
+  // Lisboa: castelo no alto, casario de telhados vermelhos e o elétrico 28 com o fio
+  () => DITHER + grad(0, 50, 'blu', 'lbl', 'lcy') + anim('bob', disc(24, 14, 5, 'yel')) + birds(14, 30) +
+    shape(122, 18, 50, t => 10 + 34 * t, 'grn') + R(104, 14, 36, 6, K.gry) + Array.from({ length: 9 }, (_, i) => R(104 + i * 4, 12, 2, 2, K.gry)).join('') +
+    R(104, 10, 6, 10, K.gry) + R(134, 10, 6, 10, K.gry) + R(108, 10, 2, 10, K.dgr) + R(138, 10, 2, 10, K.dgr) + R(122, 6, 1, 6, K.dgr) + R(123, 6, 1, 3, K.grn) + R(124, 6, 2, 3, K.red) +
+    shape(40, 30, 64, t => 60 * round(t), 'grn') + [0, 1, 2].map(r => Array.from({ length: 18 }, (_, i) => {
+      const k = r * 18 + i, x = i * 9 - (r % 2) * 4, y = 36 + r * 9 + Math.round(hash(k) * 3), h = 7 + Math.round(hash(k + 50) * 4);
+      const c = ['yel', 'wht', 'lrd', 'wht', 'lcy', 'yel', 'wht', 'lmg'][Math.floor(hash(k + 7) * 8)];
+      return hash(k + 3) < .18 ? '' : R(x, y + 2, 8, h, K[c]) + R(x - 1, y, 10, 2, K.red) + R(x + 1, y + 4, 2, 2, K.blu) + R(x + 5, y + 4, 2, 2, K.blu) + R(x + 7, y + 2, 1, h, 'url(#d-gry)');
+    }).join('')).join('') +
+    R(0, 41, 160, 1, K.dgr) + R(0, 64, 160, 6, K.gry) + R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht') + R(0, 69, 160, 1, K.dgr) +
+    anim('bob', tram28(62, 69)),
+  // Funchal: montanhas verdes com nuvens nos picos, casinhas brancas, porto e navio de cruzeiro
+  () => DITHER + grad(0, 62, 'blu', 'lbl', 'lcy') + anim('bob', disc(140, 10, 4, 'yel')) +
+    shape(40, 16, 62, t => 50 * round(t), 'cya') + shape(120, 12, 62, t => 55 * round(t), 'cya') +
+    shaded(70, 28, 62, t => 60 * round(t), 'lgn', 'grn') + shaded(140, 32, 62, t => 40 * round(t), 'lgn', 'grn') +
+    R(26, 18, 28, 3, 'url(#d-wht)') + R(104, 14, 32, 3, 'url(#d-wht)') + spr(CLOUD, 110, 10, '', 1) +
+    Array.from({ length: 36 }, (_, i) => {
+      const x = Math.round(4 + hash(i) * 150), y = Math.round(42 + hash(i + 99) * 16);
+      return R(x, y, 3, 1, K.red) + R(x, y + 1, 3, 2, K.wht);
+    }).join('') +
+    grad(62, 70, 'blu', 'lbl') + anim('bob', ship(84, 69)) +
+    R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht') + palm(52, 74, 20),
+  // Budapeste: Parlamento neogótico de cúpula vermelha e pináculos, colina de Buda ao fundo e o Danúbio
+  () => DITHER + grad(0, 56, 'blu', 'lbl', 'lcy') + anim('bob', disc(22, 12, 5, 'yel')) + birds(18, 30) +
+    shape(146, 30, 56, t => 26 * round(t), 'grn', 'dgr') + R(138, 26, 12, 6, K.gry) + R(140, 22, 3, 4, K.gry) +
+    R(28, 40, 104, 16, K.wht) + R(128, 40, 4, 16, K.gry) + R(28, 38, 104, 2, K.lrd) +
+    [44, 50].map(y => Array.from({ length: 25 }, (_, i) => arch(30 + i * 4, y, 2, 4, 'dgr')).join('')).join('') +
+    [34, 50, 106, 122].map(x => R(x, 30, 4, 8, K.wht) + R(x + 3, 30, 1, 8, K.gry) + shape(x + 2, 20, 30, t => 2 * t, 'lrd', 'red')).join('') +
+    R(68, 30, 24, 8, K.wht) + Array.from({ length: 6 }, (_, i) => R(70 + i * 4, 31, 1, 7, K.gry)).join('') +
+    shaded(80, 16, 30, t => 11 * round(t), 'lrd', 'red') + R(79.5, 8, 1, 8, K.lrd) +
+    grad(56, 70, 'blu', 'lbl') + R(28, 56, 104, 3, 'url(#d-wht)') +
+    anim('bob', R(10, 62, 16, 1, K.wht) + R(120, 64, 18, 1, K.wht) + R(56, 63, 20, 3, K.wht) + R(58, 66, 16, 1, K.blu) + R(60, 61, 8, 2, K.lrd)) +
+    R(0, 70, 160, 20, K.gry) + dith(0, 70, 160, 2, 'gry', 'wht') + R(0, 69, 160, 1, K.dgr),
+  // Assunção: Palacio de los López branco à beira do rio Paraguai, lapachos rosa e um colectivo passando
+  () => DITHER + grad(0, 50, 'lbl', 'lcy', 'wht') + anim('bob', disc(30, 12, 6, 'yel')) +
+    R(0, 48, 160, 2, K.grn) + grad(50, 58, 'blu', 'lbl') + anim('bob', R(14, 54, 14, 1, K.wht) + R(124, 53, 16, 1, K.wht)) +
+    R(50, 38, 60, 22, K.wht) + R(106, 38, 4, 22, K.gry) + R(48, 36, 64, 2, K.gry) +
+    [42, 51].map(y => Array.from({ length: 9 }, (_, i) => arch(53 + i * 6, y, 3, 6, 'dgr')).join('')).join('') +
+    R(74, 22, 12, 14, K.wht) + R(84, 22, 2, 14, K.gry) + R(73, 20, 14, 2, K.gry) + arch(78, 26, 4, 6, 'dgr') +
+    R(76, 14, 8, 6, K.wht) + R(82, 14, 2, 6, K.gry) + shape(80, 8, 14, t => 4 * t, 'gry', 'dgr') +
+    R(116, 26, 1, 34, K.dgr) + R(117, 26, 8, 2, K.red) + R(117, 28, 8, 2, K.wht) + R(117, 30, 8, 2, K.blu) +
+    crown(24, 62, 8, 'lmg', 'wht') + crown(136, 62, 7, 'lmg', 'wht') + crown(150, 62, 5, 'mag', 'lmg') +
+    R(0, 60, 160, 10, K.grn) + dith(0, 60, 160, 2, 'grn', 'lgn') +
+    R(0, 70, 160, 20, K.dgr) + R(0, 70, 160, 1, K.gry) + lanes(80) + drive(CAR, 72, 10),
+];
+
+// testemunhas na frente da cena; quem acabou de falar fica com a boca mexendo (a fala vai no #balloon)
+// contorno de meio pixel: silhueta preta deslocada nas 4 direções
+const outlined = (rows, x, y, s = 2) => {
+  const sil = rows.map(r => r.replace(/[^.]/g, 'k'));
+  return [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => spr(sil, x + dx, y + dy, '', s)).join('') + spr(rows, x, y, '', s);
+};
+// nas laterais, para não tapar o ponto turístico do centro
+const WX = [2, 26, 140];
+const witnesses = (ws, talk) => ws.map((w, i) => {
+  const x = WX[i], right = x > 100;
+  return outlined(WITNESS[w], x, FEET - 26, 1) + outlined(PROP[ACC[w]], right ? x + 2 - PROP[ACC[w]][0].length * 2 : x + 14, FEET - 12) + (talk === i + 1 ? anim('blink', R(x + 6, FEET - 18, 4, 2, K.red)) : '');
+}).join('');
+
+// --- mapa: continentes grosseiros em lon/lat (equiretangular) ---
+const CITY_LL = [[-47.9, -15.8], [-46.6, -23.5], [-43.2, -22.9], [-58.4, -34.6], [-79.9, -2.2], [-80.2, 25.8],
+  [-81.4, 28.5], [-77.0, 38.9], [35.2, 31.8], [12.5, 41.9], [-9.1, 38.7], [-16.9, 32.7], [19.0, 47.5], [-57.6, -25.3]];
+const CITY_NAME = ['Brasília', 'São Paulo', 'Rio', 'Buenos Aires', 'Guayaquil', 'Miami', 'Orlando', 'Washington', 'Jerusalém', 'Roma', 'Lisboa', 'Funchal', 'Budapeste', 'Assunção'];
+const LAND = [
+  [-80, 10, -75, 11, -62, 11, -50, 2, -35, -5, -39, -15, -41, -22, -48, -26, -53, -34, -58, -38, -65, -42, -68, -55, -73, -50, -72, -35, -71, -18, -77, -12, -81, -5, -80, 1],
+  [-100, 55, -60, 55, -60, 47, -66, 44, -70, 41, -76, 35, -81, 31, -80, 25, -83, 29, -90, 30, -97, 27, -97, 20, -90, 21, -87, 15, -83, 9, -78, 8, -83, 12, -92, 15, -100, 17],
+  [-17, 21, -17, 15, -10, 5, 5, 5, 10, 3, 9, -2, 13, -12, 12, -17, 15, -27, 20, -35, 28, -33, 35, -23, 40, -15, 40, -5, 51, 12, 43, 12, 32, 30, 20, 32, 10, 37, -6, 36, -10, 30],
+  [-10, 37, -9, 43, -2, 44, -5, 48, 5, 52, 8, 55, 45, 55, 45, 40, 35, 37, 26, 40, 23, 36, 19, 40, 18, 45, 12, 44, 16, 40, 12, 38, 8, 44, 3, 43, -2, 37],
+  [35, 32, 36, 36, 45, 37, 45, 30, 48, 29, 55, 25, 58, 22, 52, 15, 43, 12, 38, 18, 34, 28],
+];
+// viewBox do mapa = mesma área 160x90 do cartão postal
+const mx = lon => (lon + 100) * 160 / 150, my = lat => (55 - lat) * 90 / 110;
+const xy = c => [mx(CITY_LL[c][0]), my(CITY_LL[c][1])];
+const map = () => R(0, 0, 160, 90, K.blu) +
+  [20, 40, 60, 80, 100, 120, 140].map(x => R(x, 0, .3, 90, K.lbl)).join('') + [15, 30, 45, 60, 75].map(y => R(0, y, 160, .3, K.lbl)).join('') +
+  LAND.map(a => P(a.map((v, i) => i % 2 ? my(v) : mx(v)).join(' '), K.grn)).join('');
+// lado do rótulo por cidade (direita, esquerda, acima, abaixo) para não encavalar vizinhas
+const SIDE = 'rdrrrdurlrulul';
+const LBL = { r: [2.5, 1.5, 'start'], l: [-2.5, 1.5, 'end'], u: [0, -2.5, 'middle'], d: [0, 5.5, 'middle'] };
+const dot = (c, color, label = '', a = '') => {
+  const [x, y] = xy(c), [dx, dy, anchor] = LBL[SIDE[c]];
+  return C(x, y, 1.6, color, a) + (label ? T(x + dx, y + dy, 4, K.wht, label, `text-anchor="${anchor}"`) : '');
+};
+const PLANE = `<polygon points="5,0 1,1 -1,4 -2.5,4 -1.5,1 -3.5,1 -4.5,2.5 -5.5,2.5 -4.5,0 -5.5,-2.5 -4.5,-2.5 -3.5,-1 -1.5,-1 -2.5,-4 -1,-4 1,-1" fill="${K.wht}" stroke="${K.blk}" stroke-width=".3"/>`;
+
+// --- som: bipes de PC speaker (onda quadrada) ---
+let ac, muted = localStorage.mute === '1';
+const snd = document.getElementById('snd');
+const toggleSound = () => { muted = !muted; localStorage.mute = muted ? '1' : '0'; snd.textContent = muted ? '🔇' : '🔊'; };
+snd.textContent = muted ? '🔇' : '🔊';
+snd.onclick = toggleSound;
+function beep(f, ms, f2 = f, at = 0, vol = .03) {
+  if (muted) return;
+  ac ??= new AudioContext();
+  if (ac.state === 'suspended') ac.resume();
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at / 1000;
+  o.type = 'square';
+  o.frequency.setValueAtTime(f, t);
+  o.frequency.linearRampToValueAtTime(f2, t + ms / 1000);
+  g.gain.value = vol;
+  o.connect(g).connect(ac.destination);
+  o.start(t); o.stop(t + ms / 1000);
+}
+const siren = () => { for (let i = 0; i < 8; i++) beep(i % 2 ? 660 : 880, 220, undefined, i * 230); };
+
+const art = document.getElementById('art');
+function draw(kind, a) {
+  if (kind === 'title') {
+    art.innerHTML = map() + CITY_LL.map((_, c) => dot(c, K.yel)).join('') + `<g id="plane">${PLANE}</g>` +
+      R(14, 30, 132, 22, K.blk, 'opacity=".7"') + T(80, 47, 15, K.yel, 'CADÊ O 01?', 'text-anchor="middle" font-weight="bold"') +
+      anim('bob', at(FLAVIO, 140, FEET, '', PX)) + anim('bob', at(AGENT, 4, FEET, '', PX));
+    titleLoop();
+  } else if (kind === 'dossie' || kind === 'lose' && a[2]) {
+    // dossiê com carimbo; no arquivamento o carimbo é ARQUIVADO e o 01 foge ao fundo
+    const stamp = kind === 'dossie' ? 'CONFIDENCIAL' : 'ARQUIVADO';
+    art.innerHTML = R(0, 0, 160, 90, K.dgr) + R(30, 12, 40, 8, K.brn) + R(30, 18, 100, 64, K.brn) + R(34, 22, 92, 56, K.yel) +
+      [30, 36, 42, 48, 54, 60, 66].map(y => R(40, y, 70 - (y % 12) * 2, 2, K.dgr)).join('') +
+      // no arquivamento o carimbo desce para o balão da fala não cobrir
+      `<g transform="translate(0 ${kind === 'lose' ? 18 : 0}) rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, stamp, 'text-anchor="middle" font-weight="bold"')}</g>` +
+      (kind === 'lose' ? anim('away', spr(JET, 4, 70)) : '');
+  } else if (kind === 'brief') {
+    art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET, '', PX);
+  } else if (kind === 'city') {
+    // a = [cidade, w0, w1, w2, fala, no_rastro, horas, prazo]
+    const left = a[6] / a[7], bar = left > .5 ? K.lgn : left > .25 ? K.yel : K.lrd;
+    art.innerHTML = CITY[a[0]]() +
+      (a[5] && !a[4] ? anim('run', at(FLAVIO.map(r => r.replace(/[^.]/g, 'k')), 0, 70, 'opacity=".8"', PX)) : '') +
+      witnesses(a.slice(1, 4), a[4]) + R(2, 2, 52, 5, K.blk, `stroke="${K.gry}" stroke-width=".5"`) + R(3, 3, 50 * left, 3, bar, left <= .25 ? 'class="blink"' : '') +
+      // selo enquanto o mandado vale; some sozinho se cair num habeas corpus
+      (a[8] ? R(57, 1, 44, 9, K.yel, `stroke="${K.blk}" stroke-width=".8"`) + T(79, 8.4, 9, K.blk, '⚖ MANDADO', 'text-anchor="middle" font-weight="bold"') : '');
+  } else if (kind === 'travel') {
+    art.innerHTML = map() + C(...xy(a[0]), 3, 'none', `stroke="${K.lrd}" stroke-width=".6" class="blink"`) + dot(a[0], K.lrd) + T(xy(a[0])[0] + 4, xy(a[0])[1] + 1.5, 4, K.lrd, 'você') + a.slice(1).map((c, i) => dot(c, K.yel, `${i + 1}.${CITY_NAME[c]}`)).join('');
+  } else if (kind === 'win') {
+    art.innerHTML = CITY[a[0]]() + R(0, 0, 160, 90, K.blk, 'opacity=".35"') +
+      `<g class="blink">${R(0, 0, 80, 6, K.red)}${R(80, 0, 80, 6, K.lbl)}</g><g class="blink2">${R(0, 0, 80, 6, K.lbl)}${R(80, 0, 80, 6, K.red)}</g>` +
+      R(40, 10, 80, 18, K.blk) + T(80, 23, 11, K.lgn, 'PEGO!', 'text-anchor="middle" font-weight="bold"') +
+      // faixa embaixo, fora do caminho do balão
+      R(104, 79, 54, 9, K.yel, `stroke="${K.blk}" stroke-width=".8"`) + T(131, 86, 6.5, K.blk, '⚖ MANDADO DO STF', 'text-anchor="middle" font-weight="bold"') +
+      at(AGENT, 60, FEET, '', PX) + spr(WARRANT, 52, FEET - 16, '', 1) + at(FLAVIO, 84, FEET, '', PX) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
+  } else if (kind === 'lose') {
+    art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET, '', PX) + anim('away', spr(JET, 70, 40));
+  }
+}
+
+// cartão 1080×1920 com a cena de fim (sem animação CSS) e o resultado; o link vai escrito porque o Instagram descarta o texto
+async function card(share) {
+  const [line, url] = share.split(' Cadê o 01? ');
+  const img = new Image();
+  img.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(art).replace('<svg', '<svg shape-rendering="crispEdges"')], {type: 'image/svg+xml'}));
+  await img.decode();
+  URL.revokeObjectURL(img.src);
+  await document.fonts.load('72px VGA'); // o canvas não espera a fonte sozinho
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  c.width = 1080; c.height = 1920;
+  g.fillStyle = '#000'; g.fillRect(0, 0, 1080, 1920);
+  g.textAlign = 'center';
+  g.fillStyle = '#ffff55'; g.font = '150px VGA, monospace';
+  g.fillText('CADÊ O 01?', 540, 400);
+  g.drawImage(img, 0, 520, 1080, 608);
+  g.font = '72px VGA, monospace';
+  let y = 1280, row = '';
+  for (const word of line.split(' ')) {
+    if (row && g.measureText(row + ' ' + word).width > 960) { g.fillText(row, 540, y); y += 80; row = word; }
+    else row = row ? row + ' ' + word : word;
+  }
+  g.fillText(row, 540, y);
+  g.fillStyle = '#55ffff'; g.font = '56px VGA, monospace';
+  g.fillText(url.replace('https://', ''), 540, 1780);
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+
+// descrição em texto de cada cena, para leitor de tela
+function describe(kind, a) {
+  const c = CITY_NAME[a[0]];
+  return kind === 'title' ? 'Mapa-múndi com as cidades do jogo; o agente e o 01 nos cantos.'
+    : kind === 'dossie' ? 'Pasta de dossiê com carimbo CONFIDENCIAL.'
+    : kind === 'brief' ? `Cartão-postal de ${c}, com o agente no centro.`
+    : kind === 'city' ? `Cartão-postal de ${c}, com três testemunhas${a[4] ? '; uma delas está falando' : ''}${a[5] && !a[4] ? '; uma silhueta passa correndo ao fundo' : ''}${a[8] ? '; selo: mandado em mãos' : ''}.`
+    : kind === 'travel' ? `Mapa com a sua posição em ${c} e os destinos numerados: ${a.slice(1).map(d => CITY_NAME[d]).join(', ')}.`
+    : kind === 'win' ? `Em ${c}, o agente, com o mandado do STF na mão, algema o 01 sob luzes de sirene.`
+    : a[2] ? 'Dossiê com carimbo ARQUIVADO; o jatinho do 01 vai embora.'
+    : `Em ${c}, o 01 foge de jatinho enquanto o agente olha.`;
+}
+
+// avião voando por uma curva entre duas cidades
+function fly(from, to, ms, done) {
+  const [x1, y1] = xy(from), [x2, y2] = xy(to);
+  const cx = (x1 + x2) / 2, cy = Math.min(y1, y2) - Math.hypot(x2 - x1, y2 - y1) * .3;
+  const path = art.querySelector('#trail') ?? art.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'path'));
+  path.id = 'trail';
+  path.setAttribute('d', `M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}`);
+  path.setAttribute('fill', 'none'); path.setAttribute('stroke', K.wht); path.setAttribute('stroke-dasharray', '1.5 1.5'); path.setAttribute('stroke-width', '.5');
+  const plane = art.querySelector('#plane') ?? (art.insertAdjacentHTML('beforeend', `<g id="plane">${PLANE}</g>`), art.querySelector('#plane'));
+  const t0 = performance.now();
+  (function step(now) {
+    const t = Math.min(1, (now - t0) / ms), u = 1 - t;
+    const x = u * u * x1 + 2 * u * t * cx + t * t * x2, y = u * u * y1 + 2 * u * t * cy + t * t * y2;
+    const ang = Math.atan2(2 * u * (cy - y1) + 2 * t * (y2 - cy), 2 * u * (cx - x1) + 2 * t * (x2 - cx)) * 180 / Math.PI;
+    plane.setAttribute('transform', `translate(${x} ${y}) rotate(${ang}) scale(1.2)`);
+    if (t < 1 && plane.isConnected) requestAnimationFrame(step); else if (done) done();
+  })(t0);
+}
+
+let titleRun = 0;
+function titleLoop(from = 0) {
+  const run = ++titleRun, to = (from + 1 + Math.floor(Math.random() * (CITY_LL.length - 1))) % CITY_LL.length;
+  fly(from, to, 2200, () => { if (run === titleRun && scene0 === 'title') titleLoop(to); });
+}
+
+// --- ponte com o wasm ---
+const { instance } = await WebAssembly.instantiateStreaming(fetch('game.wasm'));
+const w = instance.exports;
+const dec = new TextDecoder('utf-8');
+const text = document.getElementById('text'), opts = document.getElementById('opts'), sr = document.getElementById('sr');
+let scene0 = '', city0 = -1, busy = false;
+
+// texto aparece aos poucos; bipe de digitação só na fala da testemunha
+function type(el, s, talk) {
+  clearInterval(el.typing);
+  let n = 0;
+  el.typing = setInterval(() => { n += 3; if (talk && n % 12 === 0 && s[n] > ' ') beep(1200 + n % 5 * 60, 6); el.textContent = s.slice(0, n); if (n >= s.length) clearInterval(el.typing); }, 12);
+  el.onclick = () => { clearInterval(el.typing); el.textContent = s; };
+}
+const balloon = document.getElementById('balloon'), say = balloon.querySelector('#say'), tail = document.getElementById('tail'), news = document.getElementById('news');
+// fala no balão; x em % da cena, sobre a cabeça de quem falou
+function talk(s, x) {
+  balloon.hidden = false;
+  tail.style.left = x + '%';
+  say.style.left = x < 50 ? '2%' : '';
+  say.style.right = x < 50 ? '' : '2%';
+  type(say.firstChild, s, true);
+}
+// prova (+) sobe o arpejo; evento ruim (-) desce
+function headline(lines) {
+  news.replaceChildren(...lines.map(l => Object.assign(document.createElement('div'), { className: l[0] === '+' ? 'hl' : 'hl bad', textContent: l.slice(2) })));
+  const notes = lines.some(l => l[0] === '-') ? [392, 330, 262] : lines.length ? [523, 659, 784] : [];
+  notes.forEach((f, i) => beep(f, 120, f, i * 110));
+}
+
+function choose(i) {
+  if (busy) return;
+  w.act(i);
+  show();
+}
+
+// evento no GoatCounter; se o script foi bloqueado, não faz nada
+const track = path => window.goatcounter?.count?.({ path, title: path, event: true });
+
+let lastScene;
+function show() {
+  const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
+  const [kind, ...args] = lines[0].slice(1).split(' ');
+  const a = args.map(Number);
+  const body = lines.slice(1).filter(l => !/^[>#~"+-] /.test(l)).join('\n').trim();
+  // fala da testemunha e notícias (provas/eventos) saem do texto corrido
+  const speech = lines.find(l => l.startsWith('" '))?.slice(2), hl = lines.filter(l => /^[+-] /.test(l));
+  if (kind === 'city' && !speech) a[4] = 0; // depois do mandado ninguém está falando
+  balloon.hidden = true;
+  news.replaceChildren();
+  const share = lines.find(l => l.startsWith('# '))?.slice(2);
+  const buttons = lines.filter(l => l.startsWith('> ')).map((l, i) => {
+    const b = document.createElement('button');
+    b.textContent = `${i + 1}. ${l.slice(2)}`;
+    b.onclick = () => choose(i);
+    return b;
+  });
+  // fontes do dossiê viram links para as reportagens
+  for (const [label, url] of lines.filter(l => l.startsWith('~ ')).map(l => l.slice(2).split('|'))) {
+    const l = document.createElement('a');
+    l.href = url; l.target = '_blank'; l.rel = 'noopener';
+    l.textContent = `${buttons.length + 1}. 🔗 ${label}`;
+    buttons.push(l);
+  }
+  // imagem 9:16 para Stories/Status; gerada antes do clique porque o Safari exige share() logo após o toque
+  if (share && navigator.canShare?.({files: [new File([''], 'x.png', {type: 'image/png'})]})) {
+    const b = document.createElement('button');
+    b.textContent = `${buttons.length + 1}. 📲 Compartilhar imagem`;
+    b.disabled = true;
+    let file;
+    b.onclick = () => navigator.share({files: [file], text: share}).catch(() => {});
+    b.prep = () => card(share).then(blob => { file = new File([blob], 'cade-o-01.png', {type: 'image/png'}); b.disabled = false; });
+    buttons.push(b);
+  }
+  if (share) {
+    const b = document.createElement('button'), label = `${buttons.length + 1}. Copiar resultado`;
+    b.textContent = label;
+    b.onclick = () => navigator.clipboard.writeText(share).then(() => {
+      b.textContent = '✔ Copiado!';
+      setTimeout(() => b.textContent = label, 2000);
+    }, () => prompt('Copie o resultado:', share));
+    buttons.push(b);
+  }
+  const finish = () => {
+    busy = false;
+    opts.replaceChildren(...buttons);
+    quit.hidden = !['brief', 'city', 'travel'].includes(kind);
+    draw(kind, a);
+    // troca de cena (não a cada fala) entra com um fade em degraus, estilo paleta de DOS
+    if (kind + a[0] !== lastScene && !matchMedia('(prefers-reduced-motion: reduce)').matches) art.animate({ opacity: [0, 1] }, { duration: 320, easing: 'steps(4)' });
+    lastScene = kind + a[0];
+    buttons.forEach(b => b.prep?.());
+    art.setAttribute('aria-label', describe(kind, a));
+    sr.textContent = [body, speech, ...hl.map(l => l.slice(2))].filter(Boolean).join('\n');
+    type(text, body);
+    // cidade: testemunha de 16 unidades em WX, numa cena de 160; fim: o 01 (vitória), o jatinho ou o carimbo
+    if (speech) talk(speech, kind === 'city' ? (WX[a[4] - 1] + 8) / 1.6 : kind === 'win' ? 57 : a[2] ? 8 : 48);
+    headline(hl);
+    if (kind === 'win') siren();
+    if (kind === 'win' || kind === 'lose') try { localStorage.solved = a[1]; } catch {}
+    if (kind === 'lose') beep(440, 900, 110);
+  };
+  const flying = scene0 === 'travel' && kind !== 'travel' && a[0] !== city0;
+  if (flying) {
+    busy = true;
+    opts.replaceChildren();
+    text.textContent = '✈️ Voando...';
+    beep(180, 1500, 900, 0, .02);
+    fly(city0, a[0], 1600, finish);
+  } else finish();
+  if (kind !== 'title') titleRun++;
+  // métricas: início e fim de caso, por modo (o ⛪ marca o difícil)
+  if (kind !== scene0) {
+    const mode = /⛪|Modo difícil/.test(body + share) ? 'dificil' : 'normal';
+    if (kind === 'brief') track(`inicio-${mode}`);
+    if (kind === 'win') track(`fim-vitoria-${mode}`);
+    if (kind === 'lose') track(`fim-${a[2] ? 'arquivado' : body.includes('⏰') ? 'prazo' : 'fuga'}-${mode}`);
+  }
+  scene0 = kind;
+  if (kind !== 'title' && kind !== 'dossie') city0 = a[0];
+}
+
+const quit = document.getElementById('quit');
+quit.onclick = () => { if (!busy && confirm('Abandonar o caso? Ele não conta como vitória nem derrota.')) { track(`abandono-${scene0}`); w.abandon(); show(); } };
+addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); opts.children[+e.key - 1]?.click(); });
+// carreira: total de casos resolvidos; valor ausente ou inválido vale 0
+let solved = 0;
+try { const v = Number(localStorage.solved ?? 0); if (Number.isInteger(v) && v >= 0 && v <= 0xFFFFFFFF) solved = v; } catch {}
+w.start(Date.now() >>> 0, solved);
+show();
+</script>
+</body>
+</html>
