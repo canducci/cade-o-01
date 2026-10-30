@@ -380,7 +380,7 @@ const NEED: u32 = 2;
 const ARCHIVE_ODDS: usize = 10;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-enum Screen { Title, DossieList, Dossie(usize), Brief, City, Travel, End }
+enum Screen { Title, HowTo, DossieList, Dossie(usize), Brief, City, Travel, End }
 
 pub struct Game {
     rng: u64,
@@ -606,9 +606,9 @@ impl Game {
 
     fn options(&self) -> Vec<String> {
         match self.screen {
-            Screen::Title => vec!["Novo caso".into(), "Novo caso — modo difícil: Relator Terrivelmente Evangélico".into(), "Dossiês: os casos reais".into()],
+            Screen::Title => vec!["Novo caso".into(), "Novo caso — modo difícil: Relator Terrivelmente Evangélico".into(), "Dossiês: os casos reais".into(), "Como jogar".into()],
             Screen::DossieList => CASES.iter().map(|c| c.title.to_string()).chain(["Voltar".to_string()]).collect(),
-            Screen::Dossie(_) => vec!["Voltar".into()],
+            Screen::Dossie(_) | Screen::HowTo => vec!["Voltar".into()],
             Screen::Brief => vec!["Começar a perseguição".into()],
             Screen::City => {
                 let mut o: Vec<String> = self.witnesses.iter().map(|&w| format!("Interrogar: {}", witness_name(w))).collect();
@@ -627,8 +627,10 @@ impl Game {
             Screen::Title => match i {
                 0 => self.new_case(false),
                 1 => self.new_case(true),
-                _ => self.screen = Screen::DossieList,
+                2 => self.screen = Screen::DossieList,
+                _ => self.screen = Screen::HowTo,
             },
+            Screen::HowTo => self.screen = Screen::Title,
             Screen::DossieList => self.screen = if i < CASES.len() { Screen::Dossie(i) } else { Screen::Title },
             Screen::Dossie(_) => self.screen = Screen::DossieList,
             Screen::Brief => self.screen = Screen::City,
@@ -649,6 +651,27 @@ impl Game {
     // botão à parte no JS: volta ao menu sem contar vitória nem derrota
     pub fn abandon(&mut self) {
         if matches!(self.screen, Screen::Brief | Screen::City | Screen::Travel) { self.screen = Screen::Title; }
+    }
+
+    // FTUE: dicas enquanto o jogador ainda não resolveu nenhum caso
+    fn tip(&self) -> String {
+        if self.solved > 0 { return String::new(); }
+        let final_city = self.on_trail() && self.step == self.last();
+        let t = match self.screen {
+            Screen::Travel => match self.msg.lines().find(|l| l.starts_with("\" ")) {
+                Some(l) => format!("Escolha a cidade que bate com a última pista:\n{}", &l[2..]),
+                None => "Sem pista, é chute. Interrogue alguém antes de viajar.".into(),
+            },
+            _ if final_city && self.mandado => "Mandado na mão: interrogue uma testemunha para dar o bote.".into(),
+            _ if final_city && self.provas >= NEED => "Ele está aqui! Peça o mandado ANTES de interrogar, senão ele foge.".into(),
+            _ if final_city => "Ele está aqui, mas sem mandado. Interrogar agora faz ele fugir.".into(),
+            _ if !self.on_trail() => format!("Ninguém viu nada: você saiu do rastro. Volte para {}.", CITIES[self.route[self.step]].name),
+            _ if self.step + 1 == self.last() && !self.mandado => format!(
+                "A próxima cidade é a última. Peça o mandado aqui, antes de viajar (precisa de {} provas).", NEED),
+            _ if self.last_ask.is_some() => "A pista descreve a próxima cidade. Escolha Viajar e ache a que bate com ela.".into(),
+            _ => format!("Interrogue as testemunhas ({}h cada): elas dão pistas do próximo destino, e uma pode entregar prova.", H_ASK),
+        };
+        format!("\n\n💡 Dica: {}", t)
     }
 
     fn header(&self) -> String {
@@ -677,7 +700,7 @@ impl Game {
     fn scene(&self) -> String {
         match self.screen {
             Screen::Title => "@title".into(),
-            Screen::DossieList | Screen::Dossie(_) => "@dossie".into(),
+            Screen::DossieList | Screen::Dossie(_) | Screen::HowTo => "@dossie".into(),
             Screen::Brief => format!("@brief {}", self.here),
             // @city cidade w0 w1 w2 quem_fala no_rastro horas prazo mandado
             Screen::City => format!("@city {} {} {} {} {} {} {} {} {}", self.here, self.witnesses[0], self.witnesses[1], self.witnesses[2],
@@ -700,12 +723,20 @@ Você é agente da Divisão de Fugas Improváveis. Siga as pistas, junte provas,
                 + &self.career(),
             Screen::DossieList => "DOSSIÊS\nO que dizem as investigações e reportagens (status em 28/10/2026).".into(),
             Screen::Dossie(i) => CASES[i].dossie.into(),
+            Screen::HowTo => format!("COMO JOGAR\n\n\
+1. Interrogue as testemunhas ({ask}h cada). Elas descrevem a próxima cidade do 01, e uma por cidade costuma entregar uma prova.\n\
+2. Viaje para a cidade que bate com a pista. Se ninguém viu nada, você errou: volte e tente outra.\n\
+3. Com {need} ou mais provas, peça o mandado ao STF ({w}h). Algumas provas são anuladas no pedido, então junte uma folga.\n\
+4. Na última cidade alguém aponta o 01. Sem mandado, ele foge de jatinho.\n\n\
+Fique de olho no prazo (⏳): voos longos e testemunhas demais gastam horas. Nos postos altos as pistas ficam vagas \
+e aparecem testemunhas que defendem o 01. Use os números do teclado para escolher e S para o som.",
+                ask = H_ASK, need = NEED, w = H_WARRANT),
             Screen::Brief => format!("CASO: {}\n\n{}\n\nPonto de partida: {}. Posto: {}. Você tem {}h.\n\
 Interrogar: {}h · Viajar: 1h a 15h, pela distância · Mandado: {}h, com {} provas, antes de alcançar o 01.{}",
                 CASES[self.case].title, CASES[self.case].brief, CITIES[self.route[0]].name, self.posto().name, self.hours, H_ASK, H_WARRANT, NEED,
                 if self.hard { format!("\n\n⛪ Modo difícil: 1 em {} viagens arquiva o caso, e metade das provas tende a ser anulada.", ARCHIVE_ODDS) } else { " Algumas provas podem ser anuladas.".into() }),
-            Screen::City => format!("{}{}\n\n{}", self.header(), CITIES[self.here].desc, self.msg),
-            Screen::Travel => format!("{}Para onde?", self.header()),
+            Screen::City => format!("{}{}\n\n{}{}", self.header(), CITIES[self.here].desc, self.msg, self.tip()),
+            Screen::Travel => format!("{}Para onde?{}", self.header(), self.tip()),
             Screen::End => format!("CASO: {}\n\n{}", CASES[self.case].title, self.end),
         };
         // linhas "~ " = links (veículo|URL) do dossiê; o JS vira botões
@@ -805,6 +836,28 @@ mod tests {
     // total de casos que a cena de fim manda o JS salvar
     fn end_total(g: &Game) -> u32 {
         g.render().lines().next().unwrap().split(' ').nth(2).unwrap().parse().unwrap()
+    }
+
+    #[test]
+    fn tutorial_tips_only_for_beginners() {
+        let mut g = begin(7);
+        assert!(g.render().contains("💡 Dica: Interrogue"), "{}", g.render());
+        assert!(!begin_at(7, 0, 1).render().contains("💡"));
+        // segue o rastro sem pedir mandado: aviso na penúltima e na última cidade
+        while g.step < g.last() {
+            if g.step + 1 == g.last() { assert!(g.render().contains("A próxima cidade é a última"), "{}", g.render()); }
+            g.act(0);
+            g.act(3);
+            assert!(g.render().contains("última pista"), "{}", g.render());
+            let i = g.dests.iter().position(|&d| d == g.route[g.step + 1]).unwrap();
+            g.act(i);
+        }
+        if g.screen == Screen::City { assert!(g.render().contains("Ele está aqui"), "{}", g.render()); }
+        let mut h = Game::new(1, 0);
+        h.act(3);
+        assert!(h.render().starts_with("@dossie\nCOMO JOGAR"));
+        h.act(0);
+        assert_eq!(h.screen, Screen::Title);
     }
 
     #[test]
