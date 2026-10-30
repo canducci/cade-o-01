@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cadê o 01?</title>
 <style>
-  /* VT323 (SIL OFL, ver OFL-VT323.txt), só latim */
-  @font-face { font-family: VT323; src: url(vt323.woff2) format('woff2'); font-display: swap; }
-  body { background: #000; color: #ffff55; font: 22px/1.3 VT323, "Courier New", monospace; max-width: 760px; margin: .8em auto; padding: 0 1em; }
+  /* IBM VGA 8x16, a fonte do modo texto do VGA (VileR, CC BY-SA 4.0, ver CC-BY-SA-VGA8x16.txt) */
+  @font-face { font-family: VGA; src: url(vga8x16.woff) format('woff'); font-display: swap; }
+  body { background: #000; color: #ffff55; font: 22px/1.3 VGA, "Courier New", monospace; max-width: 760px; margin: .8em auto; padding: 0 1em; }
   /* moldura em relevo e efeito de tubo: linhas de varredura e cantos escuros, por cima da arte */
   #screen { position: relative; border: 4px solid; border-color: #fff #555 #555 #fff; border-bottom: 0; }
   #screen::after { content: ''; position: absolute; inset: 0; pointer-events: none;
@@ -65,17 +65,17 @@
 <div id="opts"></div>
 <button id="quit" hidden>✖ Abandonar caso e voltar ao menu</button>
 <script type="module">
-// --- arte: tudo desenhado aqui, paleta de 16 cores estilo EGA ---
+// --- arte: tudo desenhado aqui; base nas 16 cores EGA, que abrem a paleta padrão do VGA ---
 const K = { blk: '#000', blu: '#0000aa', grn: '#00aa00', cya: '#00aaaa', red: '#aa0000', mag: '#aa00aa', brn: '#aa5500', gry: '#aaaaaa',
   dgr: '#555555', lbl: '#5555ff', lgn: '#55ff55', lcy: '#55ffff', lrd: '#ff5555', lmg: '#ff55ff', yel: '#ffff55', wht: '#fff' };
 const R = (x, y, w, h, c, a = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" ${a}/>`;
 const P = (pts, c, a = '') => `<polygon points="${pts}" fill="${c}" ${a}/>`;
 const C = (x, y, r, c, a = '') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" ${a}/>`;
 const D = (d, c, a = '') => `<path d="${d}" fill="${c}" ${a}/>`;
-const T = (x, y, s, c, txt, a = '') => `<text x="${x}" y="${y}" font-size="${s}" fill="${c}" font-family="VT323, monospace" ${a}>${txt}</text>`;
+const T = (x, y, s, c, txt, a = '') => `<text x="${x}" y="${y}" font-size="${s}" fill="${c}" font-family="VGA, monospace" ${a}>${txt}</text>`;
 // sprites: grade de texto, 1 letra = 1 pixel de 2x2 unidades; '.' é transparente
 const PAL = { k: K.blk, b: K.blu, g: K.grn, c: K.cya, r: K.red, m: K.mag, n: K.brn, a: K.gry, d: K.dgr, B: K.lbl,
-  G: K.lgn, C: K.lcy, R: K.lrd, M: K.lmg, y: K.yel, w: K.wht, p: '#ffaa77' };
+  G: K.lgn, C: K.lcy, R: K.lrd, M: K.lmg, y: K.yel, w: K.wht, p: '#ffaa77', q: '#db8a5d' };
 const spr = (rows, x, y, a = '', s = 2) => {
   let out = '';
   rows.forEach((row, j) => {
@@ -149,42 +149,66 @@ const ACC = ['taxi', 'tray', 'folder', 'choc', 'sign', 'phone', 'roll', 'bino',
   'case', 'radio', 'corn', 'money', 'pastel', 'box', 'tank', 'folder', 'board', 'rose', 'spit', 'bills',
   'hats', 'flag', 'clip', 'buoy', 'cup', 'bags', 'balloon', 'ticket', 'shop', 'case', 'radio', 'papers',
   'flag', 'pita', 'staff', 'passport', 'shield', 'spear', 'bell', 'guitar', 'nata', 'calc', 'staff', 'wine'];
-// 01: boné verde-amarelo, óculos escuros, terno escuro e gravata verde
-const FLAVIO = patch(person('y', 'd', 'd', 'p', 'cap'), { 2: [[12, 'GGGG']], 5: [[3, 'kkkkkkkkkk']], 12: [[6, 'wggw']],
-  13: [[7, 'gg']], 14: [[7, 'gg']], 15: [[7, 'gg']], 16: [[7, 'gg']] });
-// agente: boné e farda azuis com faixa amarela, coturno marrom
-const AGENT = patch(person('b', 'b', 'k', 'p', 'cap'), { 2: [[12, 'kkkk']], 14: [[3, 'yyyyyyyyyy']], 24: [[3, 'nnnn'], [9, 'nnnn']], 25: [[2, 'nnnnn'], [9, 'nnnnn']] });
+// protagonistas em resolução VGA: 32x52 em pixel de meia unidade (mesmo tamanho na tela), de boné
+// H boné e J sua sombra, S/s roupa, L/l calça, q sombra da pele
+const BIG = ['..........HHHHHHHHHH............', '........HHHHHHHHHHHHJJ..........', '.......HHHHHHHHHHHHHHJJ.........',
+  '......HHHHHHHHHHHHHHHHJJ........', '......HHHHHHHHHHHHHHHHJJkkkkkkk.', '......JJJJJJJJJJJJJJJJJJkkkkkkkk',
+  '....ppppppppppppppppppppppqq....', '....pppkkkpppppppppkkkpppppq....', '....ppppppppppppppppppppppqq....',
+  '...pppppppppppppppppppppppqqq...', '...pppppwwkkppppppppwwkkppqqq...', '...pppppwwkkppppppppwwkkppqqq...',
+  '...pppppppppppppppppppppppqqq...', '....pppppppppppqqppppppppppq....', '......ppppppppppppppppppqq......',
+  '......ppppppppppppppppppqq......', '......pppppppprrrrppppppqq......', '......ppppppppppppppppppqq......',
+  '........ppppppppppppppqq........', '........ppppppppppppppqq........', '..........ppppppppppqq..........',
+  '..........ppppppppppqq..........', '............qqqqqqqq............', '............ppppppqq............',
+  '....SSSSSSSSSSwwwwSSSSSSSSss....', '....SSSSSSSSSSSwwSSSSSSSSSss....', '..SSSSSSSSSSSSSSSSSSSSSSSSssss..',
+  '..SSSSSSSSSSSSSSSSSSSSSSSSssss..', 'SSSSSSSSSSSSSSSSSSSSSSSSSSssssss', 'SSSSSSSSSSSSSSSSSSSSSSSSSSssssss',
+  ...Array(4).fill('SSSS..SSSSSSSSSSSSSSSSSSss..ssss'), 'pppp..SSSSSSSSSSSSSSSSSSss..pppq', 'pppp..SSSSSSSSSSSSSSSSSSss..pppq',
+  'pppp..kkkkkkkkyyyykkkkkkkk..pppq', '.pp...kkkkkkkkykkykkkkkkkk...pq.', '......LLLLLLLLLLLLLLLLLLll......',
+  '......LLLLLLLLLLLLLLLLLLll......', ...Array(8).fill('......LLLLLLLL....LLLLLLll......'),
+  '......kkkkkkkk....kkkkkkkk......', '......kkkkkkkk....kkkkkkkk......', '....kakkkkkkkk....kakkkkkkkk....',
+  '....kkkkkkkkkk....kkkkkkkkkk....'];
+const big = (h, s, l) => BIG.map(r => r.replace(/J/g, DARK[h]).replace(/H/g, h).replace(/s/g, DARK[s]).replace(/S/g, s).replace(/l/g, DARK[l]).replace(/L/g, l));
+// 01: boné verde-amarelo, óculos escuros, terno escuro de lapela e gravata verde
+const FLAVIO = patch(big('y', 'd', 'd'), { 0: [[14, 'gg']], 4: [[24, 'GGGGGGG']], 5: [[24, 'gggggggg']],
+  10: [[6, 'kkkkkkkkkkkkkkkkkkkk']], 11: [[6, 'kwkkkkkkkppkwkkkkkkk']], 12: [[6, 'pkkkkkkkppppkkkkkkkp']],
+  24: [[12, 'wwggggww']], 25: [[12, 'aawggwaa']], 26: [[13, 'awggwa']], 27: [[14, 'agga']],
+  ...Object.fromEntries([28, 29, 30, 31, 32, 33, 34].map(j => [j, [[15, 'gg']]])) });
+// agente: boné e farda azuis com faixa e distintivo amarelos, coturno marrom
+const AGENT = patch(big('b', 'b', 'k'), { 26: [[19, 'yy']], 27: [[19, 'yy']], 28: [[6, 'y'.repeat(20)]], 29: [[6, 'y'.repeat(20)]],
+  ...Object.fromEntries([48, 49].map(j => [j, [[6, 'nnnnnnnn'], [18, 'nnnnnnnn']]])),
+  ...Object.fromEntries([50, 51].map(j => [j, [[4, 'nnnnnnnnnn'], [18, 'nnnnnnnnnn']]])) });
 const FEET = 88;
 
-// --- alta resolução: pixel de 1 unidade, ainda nas 16 cores; meio-tom por pontilhado xadrez ---
+// --- VGA: cena em 160x90 unidades, pixel de meia unidade (320x180); cores de 18 bits (6 por canal) ---
+const PX = .5, snap = v => Math.round(v / PX) * PX;
+const rgb = c => (c.length === 4 ? [...c.slice(1)].map(h => h + h) : c.slice(1).match(/../g)).map(h => parseInt(h, 16));
+// mistura duas cores e arredonda cada canal para os 64 níveis do DAC do VGA
+const vga = (c1, c2, t) => '#' + rgb(c1).map((v, i) => Math.round(Math.round((v + (rgb(c2)[i] - v) * t) * 63 / 255) * 255 / 63).toString(16).padStart(2, '0')).join('');
+// meio-tom: a cor por cima a 50% (no EGA era pontilhado xadrez)
 // os <defs> vão dentro da cena, para o cartão de compartilhar (que serializa só o #art) levar junto
 const DITHER = '<defs>' + Object.entries(K).map(([k, c]) =>
-  `<pattern id="d-${k}" width="2" height="2" patternUnits="userSpaceOnUse">${R(0, 0, 1, 1, c)}${R(1, 1, 1, 1, c)}</pattern>`).join('') + '</defs>';
+  `<pattern id="d-${k}" width="1" height="1" patternUnits="userSpaceOnUse">${R(0, 0, 1, 1, c, 'fill-opacity=".5"')}</pattern>`).join('') + '</defs>';
 const dith = (x, y, w, h, c1, c2) => R(x, y, w, h, K[c1]) + R(x, y, w, h, `url(#d-${c2})`);
-// degradê vertical (céu, mar) de top a bottom: pontilhado ordenado (Bayer 4x4), 8 níveis entre cada par de cores
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+// degradê vertical (céu, mar) de top a bottom em faixas de 1 pixel, cor interpolada entre as paradas
 const grad = (top, bottom, ...cs) => {
-  const n = (cs.length - 1) * 8, y = j => top + Math.round(j * (bottom - top) / (n + 1));
-  let defs = '', out = R(0, top, 160, bottom - top, K[cs.at(-1)]);
-  for (let j = 0; j < n; j++) {
-    const lvl = j % 8 * 2, next = K[cs[(j >> 3) + 1]], id = `g${top}-${j}`, band = f => R(0, y(j), 160, y(j + 1) - y(j), f);
-    if (lvl) defs += `<pattern id="${id}" width="4" height="4" patternUnits="userSpaceOnUse">${BAYER.map((b, i) => b < lvl ? R(i % 4, i >> 2, 1, 1, next) : '').join('')}</pattern>`;
-    out += band(K[cs[j >> 3]]) + (lvl ? band(`url(#${id})`) : '');
-  }
-  return `<defs>${defs}</defs>` + out;
+  const n = (bottom - top) / PX;
+  return R(0, top, 160, bottom - top, K[cs.at(-1)]) + Array.from({ length: n }, (_, j) => {
+    const u = j / (n - 1) * (cs.length - 1), k = Math.min(Math.floor(u), cs.length - 2);
+    return R(0, top + j * PX, 160, PX, vga(K[cs[k]], K[cs[k + 1]], u - k));
+  }).join('');
 };
 // forma desenhada linha a linha: meia-largura f(t), t de 0 (topo) a 1 (base); lado esquerdo iluminado
-const shape = (cx, top, bottom, f, lit, shade = lit) => Array.from({ length: bottom - top }, (_, j) => {
-  const h = Math.round(f((j + 1) / (bottom - top)));
-  return h > 0 ? R(cx - h, top + j, h, 1, K[lit] ?? lit) + R(cx, top + j, h, 1, K[shade] ?? shade) : '';
+const shape = (cx, top, bottom, f, lit, shade = lit) => Array.from({ length: Math.round((bottom - top) / PX) }, (_, j) => {
+  const h = snap(f((j + 1) * PX / (bottom - top)));
+  return h > 0 ? R(cx - h, top + j * PX, h, PX, K[lit] ?? lit) + R(cx, top + j * PX, h, PX, K[shade] ?? shade) : '';
 }).join('');
 // mesma forma com o lado direito em meio-tom, para sombra suave
 const shaded = (cx, top, bottom, f, lit, dark) => shape(cx, top, bottom, f, lit) + shape(cx, top, bottom, f, 'none', `url(#d-${dark})`);
 const round = t => Math.sqrt(t * (2 - t)); // perfil de cúpula
-const disc = (cx, cy, r, c) => shape(cx, cy - r, cy, t => r * round(t), c) + shape(cx, cy, cy + r, t => r * round(1 - t + 1 / r), c);
-const line = (x1, y1, x2, y2, c) => {
-  const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
-  return Array.from({ length: n + 1 }, (_, i) => R(Math.round(x1 + (x2 - x1) * i / n), Math.round(y1 + (y2 - y1) * i / n), 1, 1, K[c])).join('');
+const disc = (cx, cy, r, c) => shape(cx, cy - r, cy, t => r * round(t), c) + shape(cx, cy, cy + r, t => r * round(1 - t + PX / r), c);
+// traço de pontos w x w, um a cada pixel
+const line = (x1, y1, x2, y2, c, w = PX) => {
+  const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / PX;
+  return Array.from({ length: n + 1 }, (_, i) => R(snap(x1 + (x2 - x1) * i / n), snap(y1 + (y2 - y1) * i / n), w, w, K[c])).join('');
 };
 const BIRD = ['k...k', '.k.k.', '..k..'];
 const birds = (y, dur) => `<g class="cloud" style="animation-duration:${dur}s">${spr(BIRD, 0, y, '', 1)}${spr(BIRD, 8, y + 4, '', 1)}</g>`;
@@ -192,7 +216,7 @@ const CRISTO = ['.......w.......', '......www......', '......wwa......', 'wwwwww
   '......wwa......', '.....wwwa......', '.....wwwa......', '.....wwwaa.....', '.....wwwaa.....', '....wwwwaa.....', '....wwwwaa.....',
   '...wwwwwaaa....', '....aaaaaaa....', '....ddddddd....', '....aaaaaaa....', '....ddddddd....'];
 const ministry = x => R(x, 57, 7, 7, K.gry) + [58, 60, 62].map(y => R(x + 1, y, 5, 1, K.dgr)).join('');
-const CALCADA = [80, 85].map(y => Array.from({ length: 160 }, (_, x) => R(x, y + Math.round(2 * Math.sin(x / 4)), 1, 1, K.gry)).join('')).join('');
+const CALCADA = [80, 85].map(y => Array.from({ length: 160 / PX }, (_, i) => R(i * PX, y + snap(2 * Math.sin(i * PX / 4)), PX, 1, K.gry)).join('')).join('');
 
 // prédio com janelas em grade e lado direito na sombra
 const tower = (x, top, bottom, w, c, wc, sh) => R(x, top, w, bottom - top, K[c]) + R(x + w - 1, top, 1, bottom - top, K[sh]) +
@@ -201,9 +225,9 @@ const tower = (x, top, bottom, w, c, wc, sh) => R(x, top, w, bottom - top, K[c])
 const arch = (x, y, w, h, c) => R(x, y + 1, w, h - 1, K[c]) + R(x + 1, y, w - 2, 1, K[c]);
 const palm = (x, bottom, h, trunk = 'brn', leaf = 'grn', leaf2 = 'lgn') => {
   const tx = x + 4, ty = bottom - h;
-  return Array.from({ length: h }, (_, j) => R(x + Math.round(3 * (j / h) ** 2), bottom - j - 1, 2, 1, K[trunk])).join('') +
+  return Array.from({ length: h / PX }, (_, j) => R(x + snap(3 * (j * PX / h) ** 2), bottom - (j + 1) * PX, 2, PX, K[trunk])).join('') +
     [[-10, 4], [-7, 7], [-4, -3], [4, -3], [7, 7], [10, 4], [0, -4]].map(([dx, dy]) =>
-      line(tx, ty, tx + dx, ty + dy, leaf2) + line(tx, ty + 1, tx + dx, ty + dy + 1, leaf)).join('');
+      line(tx, ty, tx + dx, ty + dy, leaf2, 1) + line(tx, ty + 1, tx + dx, ty + dy + 1, leaf, 1)).join('');
 };
 const crown = (x, bottom, r, c, hi, trunk = 'brn') => R(x - 1, bottom - r - 2, 2, r + 2, K[trunk]) + disc(x, bottom - r - 3, r, c) + disc(x - r / 3, bottom - r - 4 - r / 3, r / 2, hi);
 const cypress = (x, bottom, h) => R(x - 1, bottom - 2, 2, 2, K.brn) + shape(x, bottom - h, bottom - 2, t => .5 + 3 * Math.sin(Math.PI * Math.min(1, t * 1.15) * .85), 'grn', 'dgr');
@@ -213,12 +237,12 @@ const ferris = (cx, cy, r) => {
   const pts = Array.from({ length: 8 }, (_, k) => [cx + Math.round(r * Math.cos(k * Math.PI / 4)), cy + Math.round(r * Math.sin(k * Math.PI / 4))]);
   const spokes = odd => pts.filter((_, k) => k % 2 === odd).map(([x, y]) => line(cx, cy, x, y, 'gry')).join('');
   return line(cx, cy, cx - 9, 66, 'gry') + line(cx, cy, cx + 9, 66, 'gry') +
-    Array.from({ length: 72 }, (_, k) => R(cx + Math.round(r * Math.cos(k * Math.PI / 36)), cy + Math.round(r * Math.sin(k * Math.PI / 36)), 1, 1, K.wht)).join('') +
+    Array.from({ length: 128 }, (_, k) => R(cx + snap(r * Math.cos(k * Math.PI / 64)), cy + snap(r * Math.sin(k * Math.PI / 64)), 1, 1, K.wht)).join('') +
     anim('blink', spokes(0)) + anim('blink2', spokes(1)) + pts.map(([x, y], k) => R(x - 1, y, 3, 3, K[['lrd', 'yel', 'lcy', 'lgn'][k % 4]])).join('');
 };
-const coaster = (x0, x1) => Array.from({ length: x1 - x0 }, (_, i) => {
-  const y = Math.round(42 - 12 * Math.cos(i / 6) - 4 * Math.sin(i / 2.5));
-  return R(x0 + i, y, 1, 2, K.lrd) + (i % 5 ? '' : R(x0 + i, y + 2, 1, 66 - y - 2, K.gry));
+const coaster = (x0, x1) => Array.from({ length: (x1 - x0) / PX }, (_, j) => {
+  const i = j * PX, y = snap(42 - 12 * Math.cos(i / 6) - 4 * Math.sin(i / 2.5));
+  return R(x0 + i, y, PX, 2, K.lrd) + (i % 5 ? '' : R(x0 + i, y + 2, 1, 66 - y - 2, K.gry));
 }).join('');
 // coliseu: 3 andares de arcos e ático, ruína em degraus à direita, sombra pontilhada
 const coliseu = () => Array.from({ length: 88 }, (_, i) => {
@@ -425,7 +449,7 @@ function draw(kind, a) {
   if (kind === 'title') {
     art.innerHTML = map() + CITY_LL.map((_, c) => dot(c, K.yel)).join('') + `<g id="plane">${PLANE}</g>` +
       R(14, 30, 132, 22, K.blk, 'opacity=".7"') + T(80, 47, 15, K.yel, 'CADÊ O 01?', 'text-anchor="middle" font-weight="bold"') +
-      anim('bob', at(FLAVIO, 140, FEET, '', 1)) + anim('bob', at(AGENT, 4, FEET, '', 1));
+      anim('bob', at(FLAVIO, 140, FEET, '', PX)) + anim('bob', at(AGENT, 4, FEET, '', PX));
     titleLoop();
   } else if (kind === 'dossie' || kind === 'lose' && a[2]) {
     // dossiê com carimbo; no arquivamento o carimbo é ARQUIVADO e o 01 foge ao fundo
@@ -436,12 +460,12 @@ function draw(kind, a) {
       `<g transform="translate(0 ${kind === 'lose' ? 18 : 0}) rotate(-12 80 50)">${R(46, 40, 70, 16, 'none', `stroke="${K.red}" stroke-width="2"`)}${T(81, 52, 9, K.red, stamp, 'text-anchor="middle" font-weight="bold"')}</g>` +
       (kind === 'lose' ? anim('away', spr(JET, 4, 70)) : '');
   } else if (kind === 'brief') {
-    art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET, '', 1);
+    art.innerHTML = CITY[a[0]]() + at(AGENT, 72, FEET, '', PX);
   } else if (kind === 'city') {
     // a = [cidade, w0, w1, w2, fala, no_rastro, horas, prazo]
     const left = a[6] / a[7], bar = left > .5 ? K.lgn : left > .25 ? K.yel : K.lrd;
     art.innerHTML = CITY[a[0]]() +
-      (a[5] && !a[4] ? anim('run', at(FLAVIO.map(r => r.replace(/[^.]/g, 'k')), 0, 70, 'opacity=".8"', 1)) : '') +
+      (a[5] && !a[4] ? anim('run', at(FLAVIO.map(r => r.replace(/[^.]/g, 'k')), 0, 70, 'opacity=".8"', PX)) : '') +
       witnesses(a.slice(1, 4), a[4]) + R(2, 2, 52, 5, K.blk, `stroke="${K.gry}" stroke-width=".5"`) + R(3, 3, 50 * left, 3, bar, left <= .25 ? 'class="blink"' : '') +
       // selo enquanto o mandado vale; some sozinho se cair num habeas corpus
       (a[8] ? R(57, 1, 44, 9, K.yel, `stroke="${K.blk}" stroke-width=".8"`) + T(79, 8.4, 9, K.blk, '⚖ MANDADO', 'text-anchor="middle" font-weight="bold"') : '');
@@ -452,10 +476,10 @@ function draw(kind, a) {
       `<g class="blink">${R(0, 0, 80, 6, K.red)}${R(80, 0, 80, 6, K.lbl)}</g><g class="blink2">${R(0, 0, 80, 6, K.lbl)}${R(80, 0, 80, 6, K.red)}</g>` +
       R(40, 10, 80, 18, K.blk) + T(80, 23, 11, K.lgn, 'PEGO!', 'text-anchor="middle" font-weight="bold"') +
       // faixa embaixo, fora do caminho do balão
-      R(104, 79, 54, 9, K.yel, `stroke="${K.blk}" stroke-width=".8"`) + T(131, 86, 7, K.blk, '⚖ MANDADO DO STF', 'text-anchor="middle" font-weight="bold"') +
-      at(AGENT, 60, FEET, '', 1) + spr(WARRANT, 52, FEET - 16, '', 1) + at(FLAVIO, 84, FEET, '', 1) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
+      R(104, 79, 54, 9, K.yel, `stroke="${K.blk}" stroke-width=".8"`) + T(131, 86, 6.5, K.blk, '⚖ MANDADO DO STF', 'text-anchor="middle" font-weight="bold"') +
+      at(AGENT, 60, FEET, '', PX) + spr(WARRANT, 52, FEET - 16, '', 1) + at(FLAVIO, 84, FEET, '', PX) + R(76, FEET - 10, 8, 2, K.gry) + anim('bob', spr(['.wwwww.', 'wRwRwRw', '.wwwww.', '...w...'], 98, 50));
   } else if (kind === 'lose') {
-    art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET, '', 1) + anim('away', spr(JET, 70, 40));
+    art.innerHTML = CITY[a[0]]() + at(AGENT, 30, FEET, '', PX) + anim('away', spr(JET, 70, 40));
   }
 }
 
@@ -466,22 +490,22 @@ async function card(share) {
   img.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(art).replace('<svg', '<svg shape-rendering="crispEdges"')], {type: 'image/svg+xml'}));
   await img.decode();
   URL.revokeObjectURL(img.src);
-  await document.fonts.load('72px VT323'); // o canvas não espera a fonte sozinho
+  await document.fonts.load('72px VGA'); // o canvas não espera a fonte sozinho
   const c = document.createElement('canvas'), g = c.getContext('2d');
   c.width = 1080; c.height = 1920;
   g.fillStyle = '#000'; g.fillRect(0, 0, 1080, 1920);
   g.textAlign = 'center';
-  g.fillStyle = '#ffff55'; g.font = '150px VT323, monospace';
+  g.fillStyle = '#ffff55'; g.font = '150px VGA, monospace';
   g.fillText('CADÊ O 01?', 540, 400);
   g.drawImage(img, 0, 520, 1080, 608);
-  g.font = '72px VT323, monospace';
+  g.font = '72px VGA, monospace';
   let y = 1280, row = '';
   for (const word of line.split(' ')) {
     if (row && g.measureText(row + ' ' + word).width > 960) { g.fillText(row, 540, y); y += 80; row = word; }
     else row = row ? row + ' ' + word : word;
   }
   g.fillText(row, 540, y);
-  g.fillStyle = '#55ffff'; g.font = '56px VT323, monospace';
+  g.fillStyle = '#55ffff'; g.font = '56px VGA, monospace';
   g.fillText(url.replace('https://', ''), 540, 1780);
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
