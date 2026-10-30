@@ -28,3 +28,4 @@ Testes: `cargo test` (lógica) e `node check.mjs` (ponte wasm/UTF-8).
 - Folha de Pernambuco, entrega da loja: https://www.folhape.com.br/politica/flavio-bolsonaro-entrega-loja-de-chocolates-investigada-no-caso-da/171501/
 - InfoMoney, imóveis: https://www.infomoney.com.br/?p=1377445
 - Poder360, mansão: https://www.poder360.com.br/congresso/flavio-bolsonaro-nega-irregularidades-em-compra-de-mansao-por-r-6-milhoes/
+- Poder360 (25/03/2024), pista de Budapeste (Jair Bolsonaro dormiu duas noites na embaixada da Hungria): https://www.poder360.com.br/justica/bolsonaro-dormiu-duas-noites-na-embaixada-da-hungria-diz-nytimes/
