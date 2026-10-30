@@ -64,6 +64,8 @@
 <div id="sr" class="sr" aria-live="polite"></div>
 <div id="opts"></div>
 <button id="quit" hidden>✖ Abandonar caso e voltar ao menu</button>
+<!-- métricas anônimas, sem cookies (GoatCounter); localhost não conta -->
+<script data-goatcounter="https://cade-o-01.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script type="module">
 // --- arte: tudo desenhado aqui; base nas 16 cores EGA, que abrem a paleta padrão do VGA ---
 const K = { blk: '#000', blu: '#0000aa', grn: '#00aa00', cya: '#00aaaa', red: '#aa0000', mag: '#aa00aa', brn: '#aa5500', gry: '#aaaaaa',
@@ -584,6 +586,9 @@ function choose(i) {
   show();
 }
 
+// evento no GoatCounter; se o script foi bloqueado, não faz nada
+const track = path => window.goatcounter?.count?.({ path, title: path, event: true });
+
 let lastScene;
 function show() {
   const lines = dec.decode(new Uint8Array(w.memory.buffer, w.out_ptr(), w.out_len())).split('\n');
@@ -656,12 +661,19 @@ function show() {
     fly(city0, a[0], 1600, finish);
   } else finish();
   if (kind !== 'title') titleRun++;
+  // métricas: início e fim de caso, por modo (o ⛪ marca o difícil)
+  if (kind !== scene0) {
+    const mode = /⛪|Modo difícil/.test(body + share) ? 'dificil' : 'normal';
+    if (kind === 'brief') track(`inicio-${mode}`);
+    if (kind === 'win') track(`fim-vitoria-${mode}`);
+    if (kind === 'lose') track(`fim-${a[2] ? 'arquivado' : body.includes('⏰') ? 'prazo' : 'fuga'}-${mode}`);
+  }
   scene0 = kind;
   if (kind !== 'title' && kind !== 'dossie') city0 = a[0];
 }
 
 const quit = document.getElementById('quit');
-quit.onclick = () => { if (!busy && confirm('Abandonar o caso? Ele não conta como vitória nem derrota.')) { w.abandon(); show(); } };
+quit.onclick = () => { if (!busy && confirm('Abandonar o caso? Ele não conta como vitória nem derrota.')) { track(`abandono-${scene0}`); w.abandon(); show(); } };
 addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') return toggleSound(); opts.children[+e.key - 1]?.click(); });
 // carreira: total de casos resolvidos; valor ausente ou inválido vale 0
 let solved = 0;
